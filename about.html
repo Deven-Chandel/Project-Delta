@@ -3,18 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>How I Built Time Board 3D</title>
-    <meta name="description" content="Case study: turning a single-file Canada time board into a 3D globe with live satellites, directing Claude Code from brief to deploy." />
+    <title>How I Built Time Board</title>
+    <meta name="description" content="Case study: turning a single-file Canada time board into an NSOC control board — including the flashy version I built first and why I cut it." />
     <meta name="theme-color" content="#0a0e16" />
-    <meta property="og:title" content="How I built Time Board 3D with Claude Code" />
-    <meta property="og:description" content="From a 575-line HTML page to a WebGL globe with a meeting planner and 10,000 live satellites." />
+    <meta property="og:title" content="How I built an NSOC time board with Claude Code" />
+    <meta property="og:description" content="From a 575-line HTML page, through a 3D satellite detour, to a focused tool for operations controllers." />
     <meta property="og:image" content="https://deven-chandel.github.io/Project-Delta/og.jpg" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   </head>
   <body>
     <nav class="nav">
-      <a class="brand" href="./"><span class="logo" aria-hidden="true">Δ</span><b>Time Board <em>3D</em></b></a>
+      <a class="brand" href="./"><span class="logo" aria-hidden="true">Δ</span><b>Time Board <em>NSOC</em></b></a>
       <div class="nav-links">
         <a href="./">Open the app</a>
         <a href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">Source</a>
@@ -23,30 +23,31 @@
 
     <header class="hero">
       <div class="hero-text">
-      <p class="eyebrow">Case study · Deven Chandel · October 2026</p>
-      <h1>From a flat time board to a <span>living globe</span>.</h1>
-      <p class="lede">
-        I took a single-file page I'd written to look up Canadian time zones for report timestamps and rebuilt it as an
-        interactive 3D product. I directed the build in <b>Claude Code</b>, an agentic coding tool, and every decision,
-        review and test is on record. This page covers what I asked for, what we chose, and what broke along the way.
-      </p>
-      <div class="cta">
-        <a class="btn primary" href="./">Launch Time Board 3D →</a>
-        <a class="btn" href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">Read the code</a>
+        <p class="eyebrow">Case study · Deven Chandel · October 2026</p>
+        <h1>A time board that does <span>one job well</span>.</h1>
+        <p class="lede">
+          A controller in a National Operations Centre covers sites in every Canadian time zone. When something is
+          scheduled, they need three answers fast: <b>what time is that at each site, who is on shift, and how do I
+          write it in the report?</b> I built this with <b>Claude Code</b>. The first big version I shipped got the
+          looks right and the job wrong. This page is about that, and about the rebuild.
+        </p>
+        <div class="cta">
+          <a class="btn primary" href="./">Open the board →</a>
+          <a class="btn" href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">Read the code</a>
+        </div>
       </div>
-      </div>
-      <img class="hero-phone" src="./case-study/mobile.webp" alt="Time Board 3D on a phone: the globe above the clock panel" width="600" height="1299" />
+      <img class="hero-phone" src="./case-study/mobile.webp" alt="The board on a phone: NSOC clock, converter and timeline rows" width="600" height="1299" />
       <dl class="stats">
-        <div><dt>TypeScript + CSS</dt><dd>~4.5k lines</dd></div>
-        <div><dt>Unit tests</dt><dd>26</dd></div>
-        <div><dt>Satellites tracked</dt><dd>10k+</dd></div>
+        <div><dt>Unit tests</dt><dd>48</dd></div>
+        <div><dt>End-to-end checks</dt><dd>13</dd></div>
+        <div><dt>Lines removed</dt><dd>~2,900</dd></div>
         <div><dt>Backend servers</dt><dd>0</dd></div>
       </dl>
     </header>
 
     <main>
       <section class="block">
-        <h2><span class="num">01</span> Where it started</h2>
+        <h2><span class="num">01</span> v1: the original board</h2>
         <div class="split">
           <figure>
             <img src="./case-study/v1.webp" alt="The original Canada Time Board: a grid of cards with analog clocks grouped by UTC offset" loading="lazy" width="1600" height="1075" />
@@ -54,214 +55,176 @@
           </figure>
           <div class="prose">
             <p>
-              The original solved a real problem. When you work with sites across Canada, “what time is it there?” comes up
-              constantly. It grouped places that share a clock time into one card and showed each card's offset from Toronto,
-              all computed live from IANA time zones.
+              I wrote the first version to look up time zones for report timestamps. Its one good idea was to put
+              <em>places that share a clock time in the same card</em> and show each card's Δ against a reference site.
+              That idea survives in every later version.
             </p>
             <p>What it couldn't do:</p>
             <ul>
-              <li>show <em>where</em> anything is, or which sites are in daylight</li>
-              <li>let anyone other than me add places, or use anywhere but Toronto as the reference</li>
-              <li>answer the follow-up question: <em>when can we all meet?</em></li>
+              <li>convert a future event to every site</li>
+              <li>show who is on shift</li>
+              <li>work for anyone whose sites or reference weren't hard-coded</li>
             </ul>
             <p class="aside">
-              A bug I hadn't noticed showed up in the first screenshot review: the clock face radius (78) was larger than its
-              88-pixel SVG canvas, so every analog clock rendered as a clipped square.
+              The first screenshot review also caught a v1 bug: the clock face radius (78) was larger than its 88-pixel
+              canvas, so every analog clock was clipped into a square.
             </p>
           </div>
         </div>
       </section>
 
       <section class="block">
-        <h2><span class="num">02</span> The brief and the decisions</h2>
+        <h2><span class="num">02</span> v2: the detour</h2>
         <div class="prose wide">
           <p>
-            I opened the session with three loose ideas: an interactive Warhammer 40k model, a 3D world-clock for multi-site
-            teams, or something Claude suggested. I asked it to list the skills and agents it had available and to question me
-            before building anything. It recommended the world-clock globe and pointed out the risk in the Warhammer idea:
-            Games Workshop enforces its IP strictly, which is a bad fit for a public portfolio.
+            My first brief was “something that looks good on LinkedIn”. The result was <b>Time Board 3D</b>: a WebGL
+            globe with a live day/night terminator, plus a bonus mode tracking 11,000 real satellites, with GPU motion
+            and pass predictions. It worked and it looked great.
+          </p>
+          <p>
+            Then I looked at it as the person it was meant for. A controller doesn't need Starlink. They need to know
+            whether Whitehorse is staffed at 02:00 Eastern. My verdict was <b>“jack of all trades, master of none.”</b>
+            So I wrote a new brief: an NSOC tool, with no satellites, that serves its purpose. That meant deleting about
+            2,900 lines of working code.
+          </p>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">03</span> v3: the brief and the decisions</h2>
+        <div class="prose wide">
+          <p>
+            Claude Code asked four multiple-choice questions before building anything. My answers became the spec:
           </p>
         </div>
         <ol class="decisions">
-          <li><b>Scope</b><span>Globe + live satellites, sharing one clock</span><small>My call. Claude flagged the extra scope; I wanted the wow factor.</small></li>
-          <li><b>Hosting</b><span>GitHub Pages via Actions</span><small>Free, and recruiters can read the code behind the URL.</small></li>
-          <li><b>Framing</b><span>Software-developer case study</span><small>Engineering choices up front, so this page exists.</small></li>
-          <li><b>After seeing v1</b><span>Time Board first, orbits as the bonus</span><small>Keep v1's colours, fonts, analog clocks, offset cards and Dark/Cream themes.</small></li>
-          <li><b>Your site</b><span>Auto-detected, changeable</span><small>No more hard-coded Toronto; every Δ follows the visitor.</small></li>
-          <li><b>Groups</b><span>Open to the world, Canada as demo</span><small>2,360 searchable cities, or click anywhere on the globe.</small></li>
+          <li><b>Main view</b><span>Timeline board + map</span><small>One row per clock across 24 h. The globe becomes the secondary map.</small></li>
+          <li><b>Jobs</b><span>All four</span><small>Event converter, events with countdowns, copy-for-reports, and shift / on-air hours.</small></li>
+          <li><b>Reference</b><span>NSOC, set once</span><small>Asked on first visit and remembered. Every Δ is “vs NSOC”.</small></li>
+          <li><b>Sharing</b><span>Browser + link</span><small>No accounts, no backend. Share links and JSON backups.</small></li>
+          <li><b>Kept from v1</b><span>The design language</span><small>Colours, fonts, analog clocks, offset grouping, Dark/Cream.</small></li>
+          <li><b>Cut</b><span>Satellites, everywhere</span><small>Code, dependency, CI data job, cron, docs.</small></li>
         </ol>
       </section>
 
       <section class="block">
-        <h2><span class="num">03</span> What v2 does</h2>
+        <h2><span class="num">04</span> What it does now</h2>
         <figure class="hero-shot">
-          <img src="./case-study/board.webp" alt="Time Board 3D: a night-side globe of North America with city lights, labelled site pins and arcs from Toronto, beside a panel of clock cards" loading="lazy" width="1600" height="1000" />
+          <img src="./case-study/board.webp" alt="The board: six clock rows on a 24-hour timeline with daylight shading and staffed bars; a crosshair tooltip lists every clock at 11:00 NSOC" loading="lazy" width="1600" height="1000" />
+          <figcaption>Hovering at 11:00 NSOC: one tooltip lists every clock and how many of its sites are staffed. The map's sunlight follows the crosshair.</figcaption>
         </figure>
         <div class="features">
-          <article><h3>Your board, on a planet</h3><p>Every place is a pin on a WebGL Earth. The cards still cluster places that share a clock time, and each card's colour matches its pins and arcs.</p></article>
-          <article><h3>Real day and night</h3><p>The terminator is computed from the sun's position each frame. NASA's Blue Marble and Black Marble imagery blend across it, so city lights switch on as dusk passes.</p></article>
-          <article><h3>Meeting planner</h3><p>Shows each card's working hours on your timeline and highlights when everyone overlaps. Click a column and the whole globe jumps to that moment.</p></article>
-          <article><h3>Scrub time</h3><p>Drag ±24 h or run at up to 1000×, forwards or backwards. Clocks, sunlight and satellites all move together.</p></article>
-          <article><h3>Share by link</h3><p>A group is serialized into the URL, so sending a link shares your board with no accounts and no server.</p></article>
-          <article><h3>Live orbits</h3><p>Over 10,000 real satellites, an orbit ring and predicted passes for any one you pick, and a sky plot of what is above your site right now.</p></article>
+          <article><h3>Read every site at once</h3><p>Each row runs on its own local hour ticks, so you can <em>see</em> Newfoundland's half-hour shift and where midnight falls for each site. Daylight and staffed hours are drawn on the same track.</p></article>
+          <article><h3>Convert any event</h3><p>Type <code>1400</code>, a date and a site. Every row jumps to that moment. If DST skips or repeats that time, or a site is unstaffed then, it says so.</p></article>
+          <article><h3>Paste-ready reports</h3><p><code>14:00 ET / 13:00 CT / … / 15:30 NT</code>, ordered the way Canadian ops reports read: NSOC first, then west, then east.</p></article>
+          <article><h3>Events and countdowns</h3><p>Broadcasts, maintenance windows and shift changes. Each shows a live countdown, the local time everywhere, and how many sites are staffed at the start.</p></article>
+          <article><h3>Shift coverage</h3><p>Group-wide or per-site hours. Overnight shifts and 24 h coverage both work, and so do the 23 h and 25 h days when clocks change.</p></article>
+          <article><h3>Anyone's sites</h3><p>Make a group, add any of 2,360 cities or click the map, and share it by link. The recipient gets your sites, hours and events, measured from <em>their</em> NSOC.</p></article>
         </div>
-        <div class="gallery">
-          <figure><img src="./case-study/focus.webp" alt="Zoomed in on Newfoundland, with St. John's and Corner Brook pins highlighted half an hour ahead" loading="lazy" width="1600" height="1000" /><figcaption>Focus a card and the camera flies to it. Newfoundland's +1h30m is handled correctly.</figcaption></figure>
-          <figure><img src="./case-study/cream.webp" alt="Cream theme with the meeting planner showing a 3.5-hour shared window" loading="lazy" width="1600" height="1000" /><figcaption>v1's Cream theme, carried over to the globe, with the meeting planner open.</figcaption></figure>
-          <figure class="phone"><img src="./case-study/mobile.webp" alt="Mobile layout with the globe above a bottom sheet" loading="lazy" width="600" height="1299" /><figcaption>On phones the panel becomes a bottom sheet.</figcaption></figure>
-        </div>
-      </section>
-
-      <section class="block">
-        <h2><span class="num">04</span> Architecture</h2>
-        <div class="prose wide">
-          <p>
-            Plain TypeScript, no UI framework. One <code>SimClock</code> is the single source of truth for time: every
-            component reads <code>clock.now()</code>, so a single scrub moves everything consistently.
-          </p>
-        </div>
-        <figure class="diagram">
-          <svg viewBox="0 0 960 430" role="img" aria-label="Architecture diagram: SimClock feeds the globe renderer, Time Board, satellite layer and time bar; data comes from the browser's IANA database, a build-time city index and a CI snapshot of CelesTrak">
-            <defs>
-              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead" /></marker>
-            </defs>
-            <g class="lane"><rect x="10" y="10" width="940" height="120" rx="14" /><text x="28" y="36" class="lane-label">DATA (no backend)</text></g>
-            <g class="node"><rect x="30" y="50" width="200" height="64" rx="10" /><text x="130" y="76">Intl + IANA tz db</text><text x="130" y="96" class="sub">DST rules from the browser</text></g>
-            <g class="node"><rect x="260" y="50" width="200" height="64" rx="10" /><text x="360" y="76">cities.json</text><text x="360" y="96" class="sub">built from MIT dataset</text></g>
-            <g class="node"><rect x="490" y="50" width="200" height="64" rx="10" /><text x="590" y="76">GitHub Action</text><text x="590" y="96" class="sub">CelesTrak → snapshot, 2×/day</text></g>
-            <g class="node"><rect x="720" y="50" width="210" height="64" rx="10" /><text x="825" y="76">URL fragment</text><text x="825" y="96" class="sub">#g= base64url group</text></g>
-
-            <g class="node accent"><rect x="380" y="180" width="200" height="64" rx="10" /><text x="480" y="206">SimClock</text><text x="480" y="226" class="sub">now(), rate, scrub</text></g>
-
-            <g class="node"><rect x="30" y="320" width="210" height="80" rx="10" /><text x="135" y="348">Time Board UI</text><text x="135" y="368" class="sub">offset cards · planner</text><text x="135" y="386" class="sub">Δ vs your site</text></g>
-            <g class="node"><rect x="265" y="320" width="210" height="80" rx="10" /><text x="370" y="348">Globe renderer</text><text x="370" y="368" class="sub">terminator shader</text><text x="370" y="386" class="sub">pins · arcs · labels</text></g>
-            <g class="node"><rect x="500" y="320" width="210" height="80" rx="10" /><text x="605" y="348">Satellite layer</text><text x="605" y="368" class="sub">Worker: SGP4 snapshots</text><text x="605" y="386" class="sub">GPU: p + v·dt + ½a·dt²</text></g>
-            <g class="node"><rect x="735" y="320" width="195" height="80" rx="10" /><text x="832" y="348">Time bar</text><text x="832" y="368" class="sub">±24 h · −1000×…1000×</text><text x="832" y="386" class="sub">keyboard shortcuts</text></g>
-
-            <path d="M832 320 C 832 260, 640 212, 582 212" class="flow" marker-end="url(#arr)" />
-            <path d="M440 244 L 135 318" class="flow" marker-end="url(#arr)" />
-            <path d="M465 244 L 370 318" class="flow" marker-end="url(#arr)" />
-            <path d="M500 244 L 605 318" class="flow" marker-end="url(#arr)" />
-            <path d="M130 114 L 120 318" class="flow faint" marker-end="url(#arr)" />
-            <path d="M360 114 C 360 200, 160 260, 150 318" class="flow faint" marker-end="url(#arr)" />
-            <path d="M650 114 L 650 318" class="flow faint" marker-end="url(#arr)" />
-            <path d="M790 114 L 790 262 Q 790 286 766 286 L 220 286 Q 196 286 190 318" class="flow faint" marker-end="url(#arr)" />
-          </svg>
-          <figcaption>The time bar writes to the clock; everything else reads from it. Data is static files or browser APIs.</figcaption>
+        <figure>
+          <img src="./case-study/cream.webp" alt="Cream theme: an 18:00 newscast converted to every site, with St. John's and Corner Brook in an expanded table" loading="lazy" width="1600" height="1000" />
+          <figcaption>A sample newscast converted to every site in the Cream theme. Expanding a row gives the per-site table, which is the accessible “table view” of the chart.</figcaption>
         </figure>
       </section>
 
       <section class="block">
-        <h2><span class="num">05</span> Engineering highlights</h2>
+        <h2><span class="num">05</span> Architecture</h2>
+        <figure class="diagram">
+          <svg viewBox="0 0 960 400" role="img" aria-label="Architecture: browser time-zone data, a city index and local storage feed pure core modules, which feed the timeline, converter, events, sites panel and map">
+            <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead" /></marker></defs>
+            <g class="lane"><rect x="10" y="10" width="940" height="110" rx="14" /><text x="28" y="34" class="lane-label">DATA (no backend)</text></g>
+            <g class="node"><rect x="30" y="46" width="280" height="58" rx="10" /><text x="170" y="70">Intl + IANA tz database</text><text x="170" y="90" class="sub">DST rules from the browser</text></g>
+            <g class="node"><rect x="340" y="46" width="280" height="58" rx="10" /><text x="480" y="70">localStorage · share link · backup</text><text x="480" y="90" class="sub">validated + migrated (v1 → v2)</text></g>
+            <g class="node"><rect x="650" y="46" width="280" height="58" rx="10" /><text x="790" y="70">cities.json</text><text x="790" y="90" class="sub">2,360 cities, built at compile time</text></g>
+            <g class="node accent"><rect x="160" y="160" width="640" height="70" rx="10" /><text x="480" y="188">src/core: pure, unit-tested</text><text x="480" y="210" class="sub">convert · shifts · report · abbr · rows · countdown · palette · timeline</text></g>
+            <g class="node"><rect x="20" y="300" width="170" height="70" rx="10" /><text x="105" y="328">Timeline board</text><text x="105" y="348" class="sub">crosshair · table view</text></g>
+            <g class="node"><rect x="206" y="300" width="170" height="70" rx="10" /><text x="291" y="328">Converter</text><text x="291" y="348" class="sub">DST gap / repeat</text></g>
+            <g class="node"><rect x="392" y="300" width="170" height="70" rx="10" /><text x="477" y="328">Events</text><text x="477" y="348" class="sub">countdowns · staffing</text></g>
+            <g class="node"><rect x="578" y="300" width="170" height="70" rx="10" /><text x="663" y="328">Sites</text><text x="663" y="348" class="sub">groups · hours · share</text></g>
+            <g class="node"><rect x="764" y="300" width="176" height="70" rx="10" /><text x="852" y="328">Map</text><text x="852" y="348" class="sub">terminator follows time</text></g>
+            <path d="M170 104 L 300 160" class="flow faint" marker-end="url(#arr)" />
+            <path d="M480 104 L 480 160" class="flow faint" marker-end="url(#arr)" />
+            <path d="M790 104 L 660 160" class="flow faint" marker-end="url(#arr)" />
+            <path d="M240 230 L 105 298" class="flow" marker-end="url(#arr)" />
+            <path d="M360 230 L 291 298" class="flow" marker-end="url(#arr)" />
+            <path d="M480 230 L 477 298" class="flow" marker-end="url(#arr)" />
+            <path d="M600 230 L 663 298" class="flow" marker-end="url(#arr)" />
+            <path d="M720 230 L 852 298" class="flow" marker-end="url(#arr)" />
+          </svg>
+          <figcaption>
+            One row model (<code>rows.ts</code>) drives the timeline, tooltip, map and converter, so they can't disagree.
+            A small shared view state carries “which instant am I looking at”: now, the crosshair, or a converted event.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">06</span> Engineering highlights</h2>
         <div class="highlights">
-          <article>
-            <h3>10,000 satellites at 60 fps</h3>
-            <p>
-              Running SGP4 propagation for every satellite on every frame would drop frames. Instead a Web Worker returns
-              position and velocity snapshots a few times a second, and the vertex shader moves each point with a
-              second-order step under two-body gravity, <code>p + v·dt + ½·a·dt²</code>. Motion stays smooth at 1000× with
-              a worker that is idle most of the time.
-            </p>
-          </article>
-          <article>
-            <h3>DST-correct by construction</h3>
-            <p>
-              There are no hand-written offset tables. Offsets, abbreviations and wall-clock conversions all go through
-              <code>Intl.DateTimeFormat</code> and IANA zone names. The tests prove the v1 card logic regroups correctly in
-              winter: Whitehorse joins Calgary, and Regina joins Winnipeg, because Saskatchewan and Yukon don't change
-              their clocks.
-            </p>
-          </article>
-          <article>
-            <h3>A data pipeline that's polite</h3>
-            <p>
-              The cloud sandbox Claude Code ran in couldn't reach CelesTrak, the public orbital-data source, so we changed the
-              design. A scheduled GitHub Action fetches a fresh snapshot twice a day and ships it with the site. Visitors
-              load satellites from the same origin, CelesTrak gets 2 requests a day instead of one per visitor, and the app
-              still falls back to a live fetch if the snapshot is stale.
-            </p>
-          </article>
-          <article>
-            <h3>Physically placed sunlight</h3>
-            <p>
-              The sun's sub-solar point comes from the Astronomical Almanac's low-precision formula, accurate to about
-              0.01°, and is tested against the 2024 solstice and equinox. The Earth shader blends the day and night maps
-              across a soft terminator, adds an ocean glint from a water mask, and a fresnel atmosphere.
-            </p>
-          </article>
-          <article>
-            <h3>Labels that don't collide</h3>
-            <p>
-              Pins carry HTML labels that follow them in 3D. A greedy pass places them each frame in priority order (hovered,
-              your site, focused, card leads) and drops any that would overlap. Labels near the right edge flip to the left,
-              and labels behind the Earth are hidden by a ray–sphere occlusion test.
-            </p>
-          </article>
-          <article>
-            <h3>Zero-backend sharing</h3>
-            <p>
-              Groups are UTF-8 encoded and base64url'd into the URL fragment, so they never reach a server log. On the way
-              back in, every field is validated: coordinates are bounds-checked, time zones are verified, and lengths are
-              capped.
-            </p>
-          </article>
+          <article><h3>Times that don't exist, or happen twice</h3><p>On the spring-forward night, 02:30 never happens. On the fall-back night, 01:30 happens twice. The converter detects both and says so, instead of quietly picking one. Events are stored as wall time plus zone, so a daily 07:00 handover stays at 07:00 local all year.</p></article>
+          <article><h3>Shifts across midnight and DST</h3><p>A 22:00–06:00 shift is 7 h on the spring-forward night and 9 h in autumn, and the tests check both. Every shift boundary is converted through the zone, never by adding 8 hours.</p></article>
+          <article><h3>Labels a report can trust</h3><p>Intl calls Whitehorse “GMT-7” and gives St. John's a long name. An override table pins MST and CST for the zones that don't change their clocks, so a report never says “MT” for two different times.</p></article>
+          <article><h3>Colour that works for everyone</h3><p>The eight group colours come from a validated palette. I ran a colour-vision-deficiency checker against <em>both</em> app themes: all checks pass in Dark, and Cream passes with visible labels. Status colours are kept for staffing only and always come with an icon and a word.</p></article>
+          <article><h3>Nobody loses their setup</h3><p>Saved data from the previous version is migrated: groups, theme and pinned site are kept, and dead satellite settings are dropped. Share links from v1 still open, and the test suite includes a real v1 link.</p></article>
+          <article><h3>A map that can't break the tool</h3><p>The 3D map loads on demand. If WebGL is off, only the map disappears, and the board, converter and events keep working. On phones it isn't loaded until you open the Map tab.</p></article>
         </div>
       </section>
 
       <section class="block">
-        <h2><span class="num">06</span> Bugs caught in review</h2>
+        <h2><span class="num">07</span> Caught before shipping</h2>
         <div class="prose wide">
           <p>
-            Claude Code drove a headless Chromium browser, screenshotted every mode, and we reviewed the images together.
-            Typecheck and unit tests passed throughout; these issues only showed up visually:
+            Tests passed throughout. These bugs were caught by Claude Code's <b>code-review</b> skill and by driving the
+            real app in a headless browser:
           </p>
         </div>
         <ul class="bugs">
-          <li><b>Overlapping labels.</b> Regina was hidden under Winnipeg. <span>→ priority-based collision pass.</span></li>
-          <li><b>Black halo in Cream theme.</b> The atmosphere shader wrote alpha = 1, which normal blending paints solid. <span>→ output the glow as alpha.</span></li>
-          <li><b>Flat orbit ring.</b> The camera flew to directly above the satellite, which sits in its own orbital plane, so the ring was seen edge-on. <span>→ tilt along the orbit normal.</span></li>
-          <li><b>Panel wouldn't scroll.</b> A flex child without <code>min-height: 0</code>. <span>→ one line of CSS.</span></li>
-          <li><b>Giant pins when zoomed in.</b> Markers were sized in world units. <span>→ scale with camera distance.</span></li>
-          <li><b>Hover lag with real data.</b> The first CI deploy pulled 10,656 Starlink satellites, about 3× the test set. Stress-testing at that size showed each hover pick taking ~30 ms, because it allocated vectors for every satellite. <span>→ allocation-free projection through one matrix: 0.56 ms (54× faster).</span></li>
-          <li><b>Muddy twilight band.</b> A tint along the terminator read as a stripe. <span>→ removed; the blend alone looks better.</span></li>
+          <li><b>Two maps at once.</b> Switching tabs while the map was still loading started a second WebGL canvas. <span>→ the map now loads once, even if requested twice.</span></li>
+          <li><b>Handovers that skipped “now”.</b> A zero-length daily event jumped to tomorrow the second it started. <span>→ a one-minute “now” window.</span></li>
+          <li><b>Feb 31 called a DST gap.</b> An impossible date was treated as a spring-forward time. <span>→ dates are checked against the length of the month.</span></li>
+          <li><b>Shared hours dropped.</b> Opening a link for a group you already had threw away its hours and events. <span>→ new events are merged in; a different version is imported as its own group.</span></li>
+          <li><b>Two Kingstons.</b> The tooltip matched sites by name, so same-named sites mixed up their counts. <span>→ sites are matched by their clock.</span></li>
+          <li><b>Stale warnings, stale titles.</b> A DST warning, or the previous event's title, stayed up after a new conversion. <span>→ every conversion resets both.</span></li>
+          <li><b>The window jumped.</b> Converting a time re-centred the timeline and hid the now line. <span>→ the window stays anchored on now.</span></li>
+          <li><b>Hover lag (v2).</b> Picking among 11,000 satellites took 30 ms per mouse move. <span>→ 0.56 ms, before satellites were cut.</span></li>
         </ul>
       </section>
 
       <section class="block">
-        <h2><span class="num">07</span> How I worked with Claude Code</h2>
+        <h2><span class="num">08</span> How I worked with Claude Code</h2>
         <div class="prose wide">
           <p>
-            My job was the product decisions: scope, audience, which parts of v1 had to survive, and what “good” looked
-            like. Claude Code's job was the implementation, plus the questions I hadn't thought to ask. It planned the
-            architecture, wrote the TypeScript and shaders, wrote and ran the tests, set up CI, and checked its own work in a
-            real browser.
+            My job was product: who the tool is for, what to keep from v1, what to cut, and when something wasn't good
+            enough. Claude Code did the engineering, and I asked it to use only the skills and agents the task needed:
           </p>
-          <p>What made it work:</p>
           <ul>
-            <li><b>Ask before building.</b> Two rounds of multiple-choice questions turned a vague brief into a spec in minutes.</li>
-            <li><b>Bring prior work.</b> Sharing v1 gave it a design language to keep, instead of a blank page.</li>
-            <li><b>Make it prove things.</b> Tests for the logic, screenshots for the visuals. Most of the real bugs above were caught by looking.</li>
-            <li><b>Treat blockers as design input.</b> The network restriction turned into a better data architecture.</li>
+            <li><b>A Plan agent</b> read the codebase and wrote the redesign plan. It found four problems before any code changed, including that removing satellites would break the globe's time sync.</li>
+            <li><b>The dataviz skill</b> set the timeline's rules: one crosshair for every row, fixed colourblind-safe colours, status colours only for staffing, and a table view behind every chart.</li>
+            <li><b>The run skill</b> drove the real app in headless Chromium. It took screenshots of every mode and theme on desktop and phone, and ran 13 end-to-end checks covering conversion, clipboard, share link, reload and more.</li>
+            <li><b>The code-review skill</b> reviewed the whole change and found ten issues, all fixed with regression tests.</li>
           </ul>
+          <p>
+            One honest note: I also tried to bring about 300 third-party skills from my PC into the cloud session.
+            Claude Code's safety check blocked installing untrusted instructions into its own configuration, and I
+            agreed. That stays my decision to make on my own machine.
+          </p>
         </div>
       </section>
 
       <section class="block two-col">
         <div>
-          <h2><span class="num">08</span> Stack</h2>
+          <h2><span class="num">09</span> Stack</h2>
           <ul class="tags">
-            <li>TypeScript</li><li>Three.js / WebGL</li><li>GLSL shaders</li><li>satellite.js (SGP4)</li><li>Web Workers</li>
-            <li>Vite</li><li>Vitest</li><li>GitHub Actions</li><li>GitHub Pages</li><li>Claude Code</li>
+            <li>TypeScript</li><li>Vite</li><li>Vitest</li><li>Intl / IANA tz</li><li>Three.js / WebGL</li><li>GLSL</li>
+            <li>Playwright</li><li>GitHub Actions</li><li>GitHub Pages</li><li>Claude Code</li>
           </ul>
         </div>
         <div>
           <h2>Keyboard</h2>
           <dl class="keys">
-            <div><dt><kbd>Space</kbd></dt><dd>Pause / play</dd></div>
-            <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>±15 min (Shift: ±1 h)</dd></div>
-            <div><dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Slower / faster</dd></div>
+            <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Move crosshair 15 min (Shift: 1 h)</dd></div>
+            <div><dt><kbd>Enter</kbd></dt><dd>Convert that time</dd></div>
             <div><dt><kbd>N</kbd></dt><dd>Back to now</dd></div>
-            <div><dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Time Board / Live Orbits</dd></div>
             <div><dt><kbd>T</kbd></dt><dd>Dark / Cream</dd></div>
           </dl>
         </div>
@@ -270,15 +233,15 @@
       <section class="block credits">
         <h2>Credits</h2>
         <p>
-          Earth imagery: NASA Blue Marble &amp; Black Marble (public domain), via the three-globe examples. Orbital
-          elements: <a href="https://celestrak.org" target="_blank" rel="noopener">CelesTrak</a>. City index: city-timezones
-          (MIT). Ocean time zones: @photostructure/tz-lookup (CC0). Fonts: Space Grotesk &amp; JetBrains Mono (OFL).
+          Earth imagery: NASA Blue Marble &amp; Black Marble (public domain), via the three-globe examples. City index:
+          city-timezones (MIT). Ocean time zones: @photostructure/tz-lookup (CC0). Fonts: Space Grotesk &amp; JetBrains
+          Mono (OFL). Colours: the dataviz reference palette.
         </p>
       </section>
     </main>
 
     <footer class="foot">
-      <a class="btn primary" href="./">Try Time Board 3D →</a>
+      <a class="btn primary" href="./">Open the board →</a>
       <p>Built by Deven Chandel with Claude Code · <a href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">github.com/Deven-Chandel/Project-Delta</a></p>
     </footer>
     <script type="module" src="/src/about.ts"></script>

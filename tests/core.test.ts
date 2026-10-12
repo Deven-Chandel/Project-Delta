@@ -82,6 +82,7 @@ describe('share links', () => {
   const group = {
     id: 'g1',
     name: 'Bureaus — São Paulo & Montréal',
+    shifts: [],
     places: [
       { id: 'a', name: 'São Paulo', region: 'BR', lat: -23.5505, lon: -46.6333, tz: 'America/Sao_Paulo' },
       { id: 'b', name: 'Montréal', region: 'QC', lat: 45.5017, lon: -73.5673, tz: 'America/Toronto' },

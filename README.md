@@ -1,84 +1,74 @@
-# Time Board 3D
+# Time Board · NSOC
 
-**World clocks for every site you work with, on a live 3D globe. Plus every tracked satellite overhead.**
+**Every site's local time on one board, for the controller who covers them all.**
 
 **[▶ Open the app](https://deven-chandel.github.io/Project-Delta/)** · **[How I built it](https://deven-chandel.github.io/Project-Delta/about.html)**
 
-![Time Board 3D: North America at night with site pins, arcs from Toronto, and clock cards grouped by UTC offset](public/case-study/board.webp)
+![The NSOC board: one row per clock across a 24-hour timeline with daylight shading, staffed hours and a crosshair tooltip listing every site's time](public/case-study/board.webp)
 
-Time Board 3D is the second version of a single-file *Canada Time Board* I wrote to look up time zones for report
-timestamps. It keeps v1's core idea, one card per clock time with each card's **Δ** against *your site*, and puts it on
-a WebGL Earth with a real-time day/night terminator, a meeting planner and shareable groups. A bonus **Live Orbits** mode
-shows 10,000+ real satellites on the same clock.
-
-Built by **Deven Chandel** by directing [Claude Code](https://claude.com/claude-code). The
-[case study](https://deven-chandel.github.io/Project-Delta/about.html) covers the decisions, architecture and the bugs
-caught along the way.
-
-## Features
+A controller in a National Operations Centre watches sites across every Canadian time zone. When something is
+scheduled, they need to know at a glance what time that is at each site, who is on shift, and how to write it in a
+report. This board does that one job:
 
 | | |
 |---|---|
-| **Offset cards** | Places that share a clock time cluster into one card with an analog clock, Δ vs your site, and day/night state. DST regrouping happens automatically. |
-| **Your site** | Detected from your browser's time zone. Pin any place as the reference and every Δ updates. |
-| **Groups** | Your 28 Canadian places as the demo, plus a global team. Search 2,360 cities, or click anywhere on the globe to drop a pin (ocean time zones included). |
-| **Meeting planner** | Working hours for every card on your timeline, with the shared window highlighted. Click to jump the globe to that moment. |
-| **Time travel** | Scrub ±24 h, or run from −1000× to 1000×. Sunlight, clocks and satellites stay in sync. |
-| **Share links** | A group is encoded into the URL fragment. No accounts, no server. |
-| **Live Orbits** | Space stations, Starlink, GPS, geostationary, weather and science satellites, propagated with SGP4. Shows orbit rings, the next passes over your site, and a live sky plot. |
-| **Themes** | v1's Dark and Cream themes, colours and type, applied to the globe. |
+| **Timeline board** | One row per clock (sites sharing a time are grouped, as in the original v1 board), on a shared 24-hour axis in NSOC time. Each row has its own local hour ticks, daylight shading, staffed-hours bars and a live *now* line. |
+| **Crosshair** | Hover anywhere, or use ← →, and one tooltip lists every clock at that moment with staffed counts. Click to convert that time. |
+| **Event converter** | "Event at 14:00 on Oct 14 at <site>" → that moment at every site. It flags times that DST skips or repeats, and lists any site that is unstaffed then. |
+| **Copy for reports** | One click copies `14:00 ET / 13:00 CT / 12:00 CST / 12:00 MT / 11:00 MST / 11:00 PT / 15:00 AT / 15:30 NT`, or a multi-line block with site names for email. |
+| **Events + countdowns** | Broadcasts, maintenance windows and shift changes with live countdowns, the local time at every site, and staffing at start. Daily events keep their local wall time across DST. |
+| **Shift / on-air hours** | Per group or per site. Overnight shifts (22:00–06:00) and 24 h coverage both work, including on 23 h and 25 h DST days. |
+| **Your own sites** | Make a group, add sites from 2,360 cities or by clicking the map, and share it by link (hours and events included). Groups are saved in the browser, with JSON backup and import. |
+| **NSOC reference** | Chosen once on first visit (suggested from your time zone). Every Δ is measured from it. |
+| **Map** | A secondary 3D globe showing where the sites are and where it is daylight, following the crosshair or converted time. |
 
 <p>
-  <img src="public/case-study/focus.webp" width="49%" alt="Focused on Newfoundland's half-hour time zone" />
-  <img src="public/case-study/cream.webp" width="49%" alt="Cream theme with the meeting planner" />
+  <img src="public/case-study/cream.webp" width="64%" alt="Cream theme: an 18:00 newscast converted to every site, with Newfoundland expanded into its per-site table" />
+  <img src="public/case-study/mobile.webp" width="24%" alt="Phone layout with tabs for Board, Events, Sites and Map" />
 </p>
 
-## How it works
+## How it's built
 
-- **One clock.** A single `SimClock` (`src/core/clock.ts`) is read by everything, so a scrub moves the terminator, every
-  clock face and every satellite together.
-- **Time zones** come from `Intl.DateTimeFormat` and IANA names (`src/core/tz.ts`). There are no hand-written offset tables.
-- **Sunlight.** The sub-solar point comes from the Astronomical Almanac's approximation (`src/core/sun.ts`). The Earth
-  shader blends NASA Blue Marble and Black Marble imagery across the terminator (`src/globe/shaders.ts`).
-- **Satellites.** A Web Worker runs SGP4 and returns position and velocity snapshots a few times a second. The vertex
-  shader advances each point with `p + v·dt + ½·a·dt²` under two-body gravity, so 10k points stay smooth at 60 fps
-  (`src/globe/satellites.ts`).
-- **Data pipeline.** A scheduled GitHub Action fetches a CelesTrak snapshot twice a day and deploys it with the site.
-  The app falls back to a live fetch if the snapshot is stale (`scripts/fetch-tle.mjs`, `src/orbits/tle.ts`).
+Plain TypeScript and Vite, with no UI framework and no backend. All time logic lives in `src/core` as pure, unit-tested functions:
+
+- `convert.ts` turns a wall time into an instant and detects when a time is skipped or repeated by DST. It never quietly picks one.
+- `shifts.ts` handles staffed windows, including ones that wrap past midnight, and coverage at a given moment.
+- `report.ts` and `abbr.ts` build report lines. Overrides cover zones that Intl names badly, such as Whitehorse (MST all year) and Regina (CST all year).
+- `rows.ts` is the single row model shared by the timeline, the tooltip, the map and the converter.
+- `palette.ts` has eight fixed colours, checked against both themes with a colourblind-safety validator. A ninth group gets grey instead of a new colour.
+- `migrate.ts` upgrades saved data from the previous version, and `share.ts` still decodes v1 share links.
 
 ```
-src/
-  core/     clock, time zones, sun, geo, share links, store (pure, unit-tested)
-  globe/    three.js scene, shaders, place markers, satellite layer
-  orbits/   TLE parsing, propagation worker, pass prediction
-  ui/       Time Board, Live Orbits, time bar (plain TypeScript, no framework)
-tests/      Vitest: DST regrouping, meeting overlap, solar position, ISS passes, share links
+src/core/   time zones, conversion, shifts, reports, countdowns, palette, storage (pure)
+src/ui/     timeline board, converter, events, sites, NSOC dialog (plain DOM)
+src/globe/  three.js map: Earth shader with real-time terminator, pins, labels
+tests/      48 Vitest tests: DST days, half-hour zones, overnight shifts, date line, migration, share links
 ```
 
 ## Run it locally
 
 ```bash
 npm install
-npm run dev          # http://localhost:5173
-npm test             # 26 unit tests
-npm run build        # typecheck + production build to dist/
-npm run data:tle     # optional: fetch a satellite snapshot into public/data/tle/
+npm run dev     # http://localhost:5173
+npm test        # 48 unit tests
+npm run build   # typecheck + production build to dist/
 ```
-
-Without a snapshot, Live Orbits fetches directly from CelesTrak.
 
 ## Keyboard
 
-`Space` pause · `←/→` ±15 min (Shift ±1 h) · `[` `]` speed · `N` now · `1` `2` modes · `T` theme
+`←` `→` move the crosshair 15 min (Shift: 1 h) · `Enter` convert that time · `N` back to now · `T` theme
 
-## Deploying
+## History
 
-`.github/workflows/deploy.yml` tests and builds every push. Pushes to the default branch also deploy to GitHub Pages.
-To enable deploys, open **Settings → Pages** and set **Source** to **GitHub Actions**.
+1. **v1** was a single HTML file: 28 Canadian places, grouped into cards by UTC offset, with Toronto hard-coded.
+2. **v2 ("Time Board 3D")** put the board on a globe and added a live satellite tracker. It looked impressive but didn't serve the controller.
+3. **v3 (this version)** removed the satellites (about 2,900 lines) and rebuilt the app around the NSOC workflow.
+
+The [case study](https://deven-chandel.github.io/Project-Delta/about.html) covers each step.
 
 ## Credits
 
-Earth imagery: NASA Blue Marble & Black Marble (public domain), via the
-[three-globe](https://github.com/vasturiano/three-globe) examples. Orbital elements: [CelesTrak](https://celestrak.org).
-City index: [city-timezones](https://github.com/kevinroberts/city-timezones) (MIT). Ocean time zones:
+Earth imagery: NASA Blue Marble and Black Marble (public domain), via the [three-globe](https://github.com/vasturiano/three-globe)
+examples. City index: [city-timezones](https://github.com/kevinroberts/city-timezones) (MIT). Ocean time zones:
 [@photostructure/tz-lookup](https://github.com/photostructure/tz-lookup) (CC0). Fonts: Space Grotesk and JetBrains Mono (OFL).
+Colour palette: dataviz reference palette, validated for colour-vision deficiency.

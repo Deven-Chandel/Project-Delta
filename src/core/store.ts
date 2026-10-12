@@ -1,87 +1,80 @@
 /**
- * Tiny observable store. The whole app state is one plain object; components
- * subscribe and re-render the parts they own. Persisted to localStorage
- * (best-effort — private windows and blocked storage just start fresh).
+ * Tiny observable store over one plain state object, persisted to
+ * localStorage (best-effort — private windows just start fresh) and kept in
+ * sync across open tabs via the `storage` event.
  */
-import { CANADA, GLOBAL_TEAM } from '../data/presets';
-import { distanceKm } from './geo';
+import { CANADA, CANADA_HOURS, GLOBAL_TEAM, sampleEvents } from '../data/presets';
 import { cityIndex } from './cities';
-import type { Group, Mode, Place, Theme } from './types';
-import { viewerTimeZone } from './tz';
+import { distanceKm } from './geo';
+import { migrate, uid, type AppState } from './migrate';
+import type { Group, Place } from './types';
+import { offsetMinutes, viewerTimeZone } from './tz';
 
-export interface AppState {
-  groups: Group[];
-  activeGroupId: string;
-  /** The reference "Your site" clock every Δ is measured against. */
-  home: Place;
-  /** True while `home` is still the auto-detected guess. */
-  homeAuto: boolean;
-  theme: Theme;
-  mode: Mode;
-  workStart: number;
-  workEnd: number;
-  datasets: string[];
-}
+export { uid, type AppState };
 
-const STORAGE_KEY = 'timeboard3d.v1';
+const KEY = 'timeboard3d.v2';
+const LEGACY_KEY = 'timeboard3d.v1';
 type Listener = (state: AppState, prev: AppState) => void;
 
-let seq = 0;
-export function uid(prefix = 'id'): string {
-  seq += 1;
-  return `${prefix}-${Date.now().toString(36)}-${seq.toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+export function makeGroup(name: string, places: Omit<Place, 'id'>[], shifts: Group['shifts'] = []): Group {
+  return { id: uid('g'), name, places: places.map((p) => ({ ...p, id: uid('p') })), shifts };
 }
 
-export function makeGroup(name: string, places: Omit<Place, 'id'>[]): Group {
-  return { id: uid('g'), name, places: places.map((p) => ({ ...p, id: uid('p') })) };
-}
-
-/** Guess "Your site" from the browser's time zone: the biggest city in that zone. */
-export function detectHome(tz = viewerTimeZone()): Place {
+/** Best guess for the NSOC from the browser's time zone: the biggest city in it. */
+export function detectNsoc(tz = viewerTimeZone()): Place {
   const match = cityIndex().find((c) => c.tz === tz);
-  if (match) {
-    return { id: 'home', name: match.name, region: match.regionCode, lat: match.lat, lon: match.lon, tz };
-  }
-  const name = tz.split('/').pop()?.replace(/_/g, ' ') || 'Your site';
-  return { id: 'home', name, region: '', lat: 43.653, lon: -79.383, tz };
+  if (match) return { id: 'nsoc', name: match.name, region: match.regionCode, lat: match.lat, lon: match.lon, tz };
+  // No indexed city in this zone: keep the viewer's zone, place the pin on its meridian.
+  const name = tz.split('/').pop()?.replace(/_/g, ' ') || 'NSOC';
+  return { id: 'nsoc', name, region: '', lat: 20, lon: Math.max(-180, Math.min(180, offsetMinutes(tz, Date.now()) / 4)), tz };
 }
 
-function defaults(): AppState {
-  const canada = makeGroup('Canada Coast to Coast', CANADA);
-  const global = makeGroup('Global Team', GLOBAL_TEAM);
+export function defaults(now = Date.now()): AppState {
+  const canada = makeGroup('Canada — all sites', CANADA, CANADA_HOURS);
+  const global = makeGroup('Global team (sample)', GLOBAL_TEAM, [{ start: 9 * 60, end: 17 * 60 }]);
+  const nsoc = detectNsoc();
   return {
+    version: 2,
     groups: [canada, global],
     activeGroupId: canada.id,
-    home: detectHome(),
-    homeAuto: true,
+    nsoc,
+    nsocConfirmed: false,
     theme: 'dark',
-    mode: 'board',
-    workStart: 9,
-    workEnd: 17,
-    datasets: ['stations', 'starlink', 'gps-ops', 'geo', 'weather', 'science'],
+    events: sampleEvents(nsoc.tz, now, canada.id),
+    axis: 'rolling',
   };
 }
 
-function load(): AppState {
-  const base = defaults();
+function read(): AppState {
+  const fresh = defaults();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return base;
-    const saved = JSON.parse(raw) as Partial<AppState>;
-    const state: AppState = { ...base, ...saved };
-    if (!Array.isArray(state.groups) || state.groups.length === 0) state.groups = base.groups;
-    if (!state.groups.some((g) => g.id === state.activeGroupId)) state.activeGroupId = state.groups[0].id;
-    // A visitor who never pinned a site gets a fresh guess (they may have travelled).
-    if (state.homeAuto !== false) state.home = base.home;
-    return state;
+    const raw = localStorage.getItem(KEY) ?? localStorage.getItem(LEGACY_KEY);
+    return raw ? migrate(JSON.parse(raw), fresh) : fresh;
   } catch {
-    return base;
+    return fresh;
   }
 }
 
 class Store {
-  private state: AppState = load();
+  private state: AppState = read();
   private listeners = new Set<Listener>();
+
+  constructor() {
+    try {
+      window.addEventListener('storage', (e: StorageEvent) => {
+        if (e.key !== KEY || !e.newValue) return;
+        const prev = this.state;
+        try {
+          this.state = migrate(JSON.parse(e.newValue), prev);
+        } catch {
+          return;
+        }
+        for (const l of this.listeners) l(this.state, prev);
+      });
+    } catch {
+      /* no window (tests) */
+    }
+  }
 
   get(): AppState {
     return this.state;
@@ -92,7 +85,11 @@ class Store {
     const next = structuredClone(prev);
     fn(next);
     this.state = next;
-    this.persist();
+    try {
+      localStorage.setItem(KEY, JSON.stringify(next));
+    } catch {
+      /* storage unavailable — keep working in memory */
+    }
     for (const l of this.listeners) l(next, prev);
   }
 
@@ -105,7 +102,7 @@ class Store {
     return this.state.groups.find((g) => g.id === this.state.activeGroupId) ?? this.state.groups[0];
   }
 
-  /** Every place across groups, de-duplicated by proximity (for pickers). */
+  /** Every place across groups, de-duplicated by proximity (for the NSOC picker). */
   allPlaces(): Place[] {
     const out: Place[] = [];
     for (const g of this.state.groups) {
@@ -114,14 +111,6 @@ class Store {
       }
     }
     return out;
-  }
-
-  private persist(): void {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
-    } catch {
-      /* storage unavailable — keep working in memory */
-    }
   }
 }
 

@@ -5,7 +5,7 @@ import './about.css';
 
 // Match the theme the visitor picked in the app.
 try {
-  const saved = JSON.parse(localStorage.getItem('timeboard3d.v1') ?? '{}') as { theme?: string };
+  const saved = JSON.parse(localStorage.getItem('timeboard3d.v2') ?? localStorage.getItem('timeboard3d.v1') ?? '{}') as { theme?: string };
   if (saved.theme === 'cream') document.documentElement.dataset.theme = 'cream';
 } catch {
   /* storage unavailable */

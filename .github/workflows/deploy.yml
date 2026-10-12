@@ -4,10 +4,6 @@ on:
   push:
   pull_request:
   workflow_dispatch:
-  # Refresh the satellite snapshot twice a day (CelesTrak updates every ~2 h;
-  # TLEs stay accurate for days, so this is plenty and polite to their servers).
-  schedule:
-    - cron: '17 5,17 * * *'
 
 permissions:
   contents: read
@@ -27,8 +23,6 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      - name: Fetch satellite snapshot from CelesTrak
-        run: npm run data:tle
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

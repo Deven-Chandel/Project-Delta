@@ -1,13 +1,12 @@
 /**
  * The 3D scene: Earth, atmosphere, stars, sun, and the camera rig.
  *
- * Earth never rotates; it is the Earth-fixed frame. The sun direction moves
- * with the simulation clock, and an `inertial` group (for satellites) is
- * spun by Greenwich sidereal time, so space-frame objects line up with the ground.
+ * Earth never rotates; it is the Earth-fixed frame. The sun direction follows
+ * the clock, or a preview time while the controller hovers the timeline or
+ * converts an event, so the terminator shows daylight at that moment.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { gstime } from 'satellite.js';
 import { latLonToVec3, vec3ToLatLon } from '../core/geo';
 import { subsolarPoint } from '../core/sun';
 import type { SimClock } from '../core/clock';
@@ -39,8 +38,6 @@ export class Globe {
   readonly camera: THREE.PerspectiveCamera;
   readonly renderer: THREE.WebGLRenderer;
   readonly controls: OrbitControls;
-  /** Children are in the Earth-centred inertial (ECI) frame. */
-  readonly inertial = new THREE.Group();
   readonly overlay: HTMLDivElement;
   readonly earth: THREE.Mesh;
   readonly sunDir = new THREE.Vector3(1, 0, 0);
@@ -60,6 +57,7 @@ export class Globe {
   private moveHandlers = new Set<(x: number, y: number) => void>();
   private interacted = false;
   private insets = { left: 0, top: 0, bottom: 0 };
+  private previewTime: number | null = null;
   ready: Promise<void>;
 
   constructor(
@@ -86,7 +84,7 @@ export class Globe {
     this.controls.enablePan = false;
     this.controls.minDistance = 1.22;
     this.controls.maxDistance = 6;
-    this.controls.autoRotate = !reducedMotion;
+    this.controls.autoRotate = false;
     this.controls.autoRotateSpeed = 0.35;
     this.controls.addEventListener('start', () => {
       this.flight = null;
@@ -206,8 +204,6 @@ export class Globe {
     );
     this.scene.add(this.meridians);
 
-    this.scene.add(this.inertial);
-
     this.bindPointer();
     new ResizeObserver(() => this.resize()).observe(container);
     this.resize();
@@ -240,6 +236,11 @@ export class Globe {
     (this.meridians.material as THREE.LineBasicMaterial).color.set(cream ? 0x6b5a3e : 0x9fb4d0);
     (this.meridians.material as THREE.LineBasicMaterial).opacity = cream ? 0.12 : 0.07;
     this.sun.visible = !cream;
+  }
+
+  /** Show sunlight at a specific moment (timeline hover, converted event); null = live. */
+  setPreviewTime(t: number | null): void {
+    this.previewTime = t;
   }
 
   setMeridiansVisible(v: boolean): void {
@@ -363,12 +364,11 @@ export class Globe {
     const nowReal = performance.now();
     const dt = Math.min(0.1, (nowReal - this.lastFrame) / 1000);
     this.lastFrame = nowReal;
-    const sim = this.clock.now();
+    const sim = this.previewTime ?? this.clock.now();
 
     const s = subsolarPoint(sim);
     this.sunDir.set(...latLonToVec3(s.lat, s.lon)).normalize();
     this.sun.position.copy(this.sunDir).multiplyScalar(120);
-    this.inertial.rotation.y = -gstime(new Date(sim));
     this.starsMat.uniforms.time.value = nowReal / 1000;
 
     if (this.flight) this.stepFlight(nowReal);

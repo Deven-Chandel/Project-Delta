@@ -1,6 +1,6 @@
 /**
  * Place markers on the globe: glowing pins, HTML labels that track their
- * pins, and animated arcs from "Your site" to every place in the group.
+ * pins, and animated arcs from the NSOC to every site in the group.
  */
 import * as THREE from 'three';
 import { arcPoints, latLonToVec3 } from '../core/geo';
@@ -141,7 +141,7 @@ export class PlacesLayer {
     const label = document.createElement('div');
     label.className = `globe-label${isHome ? ' is-home' : ''}`;
     label.style.setProperty('--c', color);
-    label.innerHTML = `${isHome ? '<span class="tag">Your site</span>' : ''}<b></b><time></time>`;
+    label.innerHTML = `${isHome ? '<span class="tag">NSOC</span>' : ''}<b></b><time></time>`;
     label.querySelector('b')!.textContent = place.name;
     this.globe.overlay.appendChild(label);
 
@@ -216,9 +216,13 @@ export class PlacesLayer {
     // Greedy collision avoidance: higher-priority labels claim space first.
     candidates.sort((a, b) => a.prio - b.prio);
     const placed: [number, number, number, number][] = [];
+    const maxX = this.globe.overlay.clientWidth - 8;
     for (const c of candidates) {
       const w = c.m.spec.place.name.length * 7 + (c.m === this.home ? 112 : 58);
-      const box: [number, number, number, number] = [c.x + 10, c.y - 31, c.x + 10 + w, c.y - 9];
+      // Labels that would run off the right edge sit to the left of their pin.
+      const flip = c.x + 10 + w > maxX;
+      const left = flip ? c.x - w - 10 : c.x + 10;
+      const box: [number, number, number, number] = [left, c.y - 31, left + w, c.y - 9];
       const hit = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
       if (hit && c.prio > 1) {
         c.m.label.classList.remove('show');
@@ -226,10 +230,8 @@ export class PlacesLayer {
       }
       placed.push(box);
       c.m.label.classList.add('show');
-      // Flip labels that would run off the right edge to the left of their pin.
-      const flip = box[2] > this.globe.overlay.clientWidth - 8;
       c.m.label.classList.toggle('flip', flip);
-      const x = flip ? c.x - (box[2] - box[0]) - 20 : c.x;
+      const x = flip ? c.x - w - 20 : c.x;
       c.m.label.style.transform = `translate3d(${x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`;
       c.m.label.style.opacity = String(Math.min(1, (c.facing - 0.12) * 5));
       c.m.label.style.zIndex = String(10 - c.prio);

@@ -1,7 +1,7 @@
 /**
  * Simulation clock shared by every part of the app.
  *
- * The globe's day/night terminator, every Time Board clock and every satellite
+ * The globe's day/night terminator and every Time Board clock
  * read the same `now()`, so scrubbing or speeding up time moves all of them
  * together. Time is stored as an anchor pair (sim time, real time) plus a rate,
  * which keeps `now()` cheap and drift-free.

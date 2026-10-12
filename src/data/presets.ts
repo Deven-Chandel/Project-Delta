@@ -1,4 +1,6 @@
-import type { Place } from '../core/types';
+import { localAt } from '../core/countdown';
+import { zonedParts } from '../core/tz';
+import type { Place, TBEvent } from '../core/types';
 
 type Seed = Omit<Place, 'id'>;
 
@@ -47,3 +49,18 @@ export const GLOBAL_TEAM: Seed[] = [
   { name: 'Tokyo', region: 'JP', lat: 35.676, lon: 139.65, tz: 'Asia/Tokyo' },
   { name: 'Sydney', region: 'AU', lat: -33.869, lon: 151.209, tz: 'Australia/Sydney' },
 ];
+
+/** Sample staffed hours for the demo group — edit to match your sites. */
+export const CANADA_HOURS = [{ start: 7 * 60, end: 23 * 60 }];
+
+/** Clearly-labelled sample events so a first visit shows the events list working. */
+export function sampleEvents(nsocTz: string, now: number, groupId: string): TBEvent[] {
+  const at = (min: number, dayOffset: number) => localAt(nsocTz, now, min, dayOffset);
+  const z = zonedParts(nsocTz, now);
+  const newscastDay = z.hour * 60 + z.minute < 18 * 60 ? 0 : 1;
+  return [
+    { id: 'sample-news', title: 'Sample · National newscast', kind: 'broadcast', local: at(18 * 60, newscastDay), tz: nsocTz, sourceLabel: 'NSOC', durationMin: 60, repeat: 'daily', groupId },
+    { id: 'sample-maint', title: 'Sample · Network maintenance window', kind: 'maintenance', local: at(2 * 60, 1), tz: nsocTz, sourceLabel: 'NSOC', durationMin: 120, repeat: 'none', groupId },
+    { id: 'sample-shift', title: 'Sample · Day shift handover', kind: 'shift', local: at(7 * 60, 1), tz: nsocTz, sourceLabel: 'NSOC', durationMin: 0, repeat: 'daily', groupId },
+  ];
+}

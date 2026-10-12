@@ -3,22 +3,20 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Interactive 3D globe: group world clocks across sites and track live satellites.",
+  "description": "NSOC time board: every site's local time on one timeline and map, with an event converter, shift coverage and report-ready copy.",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "data:cities": "node scripts/build-cities.mjs",
-    "data:tle": "node scripts/fetch-tle.mjs"
+    "data:cities": "node scripts/build-cities.mjs"
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
     "@fontsource-variable/space-grotesk": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
     "@photostructure/tz-lookup": "^11.7.0",
-    "satellite.js": "^7.1.0",
     "three": "^0.186.1"
   },
   "devDependencies": {

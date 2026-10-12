@@ -1,14 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { CANADA } from '../src/data/presets';
 import {
-  commonWorkWindow,
   formatDelta,
   formatOffset,
   groupByOffset,
-  intersectIntervals,
   offsetMinutes,
   relativeDay,
-  workIntervals,
   zonedParts,
   zonedToUtc,
 } from '../src/core/tz';
@@ -78,38 +75,5 @@ describe('groupByOffset (the v1 card logic)', () => {
     expect(at(-420)).toEqual(expect.arrayContaining(['Whitehorse', 'Calgary', 'Edmonton']));
     expect(at(-360)).toEqual(expect.arrayContaining(['Regina', 'Saskatoon', 'Winnipeg']));
     expect(at(-210)).toEqual(["Corner Brook", "St. John's"]);
-  });
-});
-
-describe('meeting planner', () => {
-  const from = Date.UTC(2024, 6, 10, 4, 0); // Toronto midnight (EDT)
-  const to = from + 86_400_000;
-
-  it('finds each zone’s working hours inside the window', () => {
-    expect(workIntervals('America/Toronto', from, to, 9, 17)).toEqual([[Date.UTC(2024, 6, 10, 13), Date.UTC(2024, 6, 10, 21)]]);
-  });
-
-  it('intersects Toronto and London 9–5 to a 3-hour window', () => {
-    const w = commonWorkWindow(['America/Toronto', 'Europe/London'], from, to);
-    expect(w).toEqual([[Date.UTC(2024, 6, 10, 13), Date.UTC(2024, 6, 10, 16)]]);
-  });
-
-  it('returns nothing when there is no overlap', () => {
-    expect(commonWorkWindow(['America/Los_Angeles', 'Asia/Kolkata'], from, to)).toEqual([]);
-  });
-
-  it('intersects interval lists', () => {
-    expect(
-      intersectIntervals(
-        [
-          [0, 10],
-          [20, 30],
-        ],
-        [[5, 25]],
-      ),
-    ).toEqual([
-      [5, 10],
-      [20, 25],
-    ]);
   });
 });

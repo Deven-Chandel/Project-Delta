@@ -3,46 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Time Board 3D</title>
-    <meta name="description" content="Group world clocks by site on an interactive 3D globe with a live day/night terminator — plus every tracked satellite overhead." />
+    <title>Time Board · NSOC</title>
+    <meta name="description" content="An NSOC time board: every site's local time on one timeline and map, with an event converter, shift coverage and report-ready copy." />
     <meta name="theme-color" content="#0a0e16" />
-    <meta property="og:title" content="Time Board 3D" />
-    <meta property="og:description" content="World clocks for your sites on a live 3D globe, with a meeting planner and real-time satellites." />
+    <meta property="og:title" content="Time Board · NSOC" />
+    <meta property="og:description" content="Every site's local time on one timeline: convert an event to every site, see who's staffed, and copy report-ready times." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="https://deven-chandel.github.io/Project-Delta/og.jpg" />
     <meta property="og:url" content="https://deven-chandel.github.io/Project-Delta/" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   </head>
-  <body data-mode="board">
-    <div id="globe" class="globe"></div>
-
+  <body data-tab="board">
+    <a class="skip" href="#pane-board">Skip to the board</a>
     <header class="topbar">
-      <a class="brand" href="./" aria-label="Time Board 3D home">
+      <a class="brand" href="./" aria-label="Time Board home">
         <span class="logo" aria-hidden="true">Δ</span>
-        <span class="brand-text">
-          <b>Time Board <em>3D</em></b>
-          <small>Every site, every time zone, one globe</small>
-        </span>
+        <span class="brand-text"><b>Time Board <em>NSOC</em></b><small>Every site’s time on one board</small></span>
       </a>
-      <nav class="modes" aria-label="Mode">
-        <button type="button" data-mode="board" aria-pressed="true">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-          Time Board
-        </button>
-        <button type="button" data-mode="orbits" aria-pressed="false">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><ellipse cx="12" cy="12" rx="10" ry="4.5" transform="rotate(-25 12 12)"/></svg>
-          Live Orbits
-        </button>
-      </nav>
+      <button id="nsoc-clock" class="nsoc-clock" type="button" title="Change the NSOC location"></button>
+      <button id="next-event" class="next-chip" type="button" hidden></button>
       <div class="top-actions">
         <div class="theme-toggle" role="group" aria-label="Theme">
           <button type="button" data-theme-btn="dark" aria-pressed="true">Dark</button>
           <button type="button" data-theme-btn="cream" aria-pressed="false">Cream</button>
         </div>
-        <a class="btn ghost" href="./about.html">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5zM4 4.5v18"/></svg>
-          <span>How I built this</span>
+        <a class="icon-btn" href="./about.html" title="How I built this" aria-label="How I built this">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22.5zM4 4.5v18"/></svg>
         </a>
         <a class="icon-btn" href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener" aria-label="Source on GitHub" title="Source on GitHub">
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 19c-4.3 1.4-4.3-2.5-6-3m12 5v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12.3 12.3 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21"/></svg>
@@ -50,20 +37,33 @@
       </div>
     </header>
 
-    <aside id="panel" class="panel">
-      <button id="sheet-toggle" class="sheet-toggle" type="button" aria-expanded="true" aria-controls="panel">
-        <span class="grip" aria-hidden="true"></span><span class="sr-only">Toggle panel</span>
-      </button>
-      <div class="panel-scroll">
-        <div id="board-panel"></div>
-        <div id="orbits-panel" hidden></div>
-      </div>
-    </aside>
+    <main class="layout">
+      <section id="pane-board" class="pane pane-board" aria-label="Board">
+        <div class="board-head">
+          <label class="select group-pick"><select id="group-select" aria-label="Group shown on the board"></select></label>
+          <button type="button" class="link" data-goto="sites">Manage sites & hours</button>
+        </div>
+      </section>
+      <aside class="side">
+        <div id="pane-map" class="pane pane-map" aria-label="Map">
+          <div id="globe" class="globe"></div>
+        </div>
+        <div class="side-tabs" role="tablist" aria-label="Side panel">
+          <button type="button" role="tab" data-side="events" aria-selected="true">Events</button>
+          <button type="button" role="tab" data-side="sites" aria-selected="false">Sites</button>
+        </div>
+        <div id="pane-events" class="pane pane-events" role="tabpanel"></div>
+        <div id="pane-sites" class="pane pane-sites" role="tabpanel"></div>
+      </aside>
+    </main>
 
-    <footer id="timebar" class="timebar" aria-label="Time controls"></footer>
-
-    <div class="loader" aria-hidden="true"><span class="logo">Δ</span><span>Loading the planet…</span></div>
-    <noscript><p class="noscript">Time Board 3D needs JavaScript to draw the globe.</p></noscript>
+    <nav class="tabbar" aria-label="Sections">
+      <button type="button" data-tab="board" aria-current="page">Board</button>
+      <button type="button" data-tab="events">Events</button>
+      <button type="button" data-tab="sites">Sites</button>
+      <button type="button" data-tab="map">Map</button>
+    </nav>
+    <noscript><p class="noscript">Time Board needs JavaScript.</p></noscript>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
