@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>How I Built Time Board 3D</title>
+    <meta name="description" content="Case study: turning a single-file Canada time board into a 3D globe with live satellites, directing Claude Code from brief to deploy." />
+    <meta name="theme-color" content="#0a0e16" />
+    <meta property="og:title" content="How I built Time Board 3D with Claude Code" />
+    <meta property="og:description" content="From a 575-line HTML page to a WebGL globe with a meeting planner and 10,000 live satellites." />
+    <meta property="og:image" content="https://deven-chandel.github.io/Project-Delta/og.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="./"><span class="logo" aria-hidden="true">Δ</span><b>Time Board <em>3D</em></b></a>
+      <div class="nav-links">
+        <a href="./">Open the app</a>
+        <a href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">Source</a>
+      </div>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-text">
+      <p class="eyebrow">Case study · Deven Chandel · October 2026</p>
+      <h1>From a flat time board to a <span>living globe</span>.</h1>
+      <p class="lede">
+        I took a single-file page I'd written to look up Canadian time zones for report timestamps and rebuilt it as an
+        interactive 3D product. I directed the build in <b>Claude Code</b>, an agentic coding tool, and every decision,
+        review and test is on record. This page covers what I asked for, what we chose, and what broke along the way.
+      </p>
+      <div class="cta">
+        <a class="btn primary" href="./">Launch Time Board 3D →</a>
+        <a class="btn" href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">Read the code</a>
+      </div>
+      </div>
+      <img class="hero-phone" src="./case-study/mobile.webp" alt="Time Board 3D on a phone: the globe above the clock panel" width="600" height="1299" />
+      <dl class="stats">
+        <div><dt>TypeScript + CSS</dt><dd>~4.5k lines</dd></div>
+        <div><dt>Unit tests</dt><dd>26</dd></div>
+        <div><dt>Satellites tracked</dt><dd>10k+</dd></div>
+        <div><dt>Backend servers</dt><dd>0</dd></div>
+      </dl>
+    </header>
+
+    <main>
+      <section class="block">
+        <h2><span class="num">01</span> Where it started</h2>
+        <div class="split">
+          <figure>
+            <img src="./case-study/v1.webp" alt="The original Canada Time Board: a grid of cards with analog clocks grouped by UTC offset" loading="lazy" width="1600" height="1075" />
+            <figcaption><b>v1 · Canada Time Board.</b> One HTML file, 28 hard-coded places, Toronto fixed as “your site”.</figcaption>
+          </figure>
+          <div class="prose">
+            <p>
+              The original solved a real problem. When you work with sites across Canada, “what time is it there?” comes up
+              constantly. It grouped places that share a clock time into one card and showed each card's offset from Toronto,
+              all computed live from IANA time zones.
+            </p>
+            <p>What it couldn't do:</p>
+            <ul>
+              <li>show <em>where</em> anything is, or which sites are in daylight</li>
+              <li>let anyone other than me add places, or use anywhere but Toronto as the reference</li>
+              <li>answer the follow-up question: <em>when can we all meet?</em></li>
+            </ul>
+            <p class="aside">
+              A bug I hadn't noticed showed up in the first screenshot review: the clock face radius (78) was larger than its
+              88-pixel SVG canvas, so every analog clock rendered as a clipped square.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">02</span> The brief and the decisions</h2>
+        <div class="prose wide">
+          <p>
+            I opened the session with three loose ideas: an interactive Warhammer 40k model, a 3D world-clock for multi-site
+            teams, or something Claude suggested. I asked it to list the skills and agents it had available and to question me
+            before building anything. It recommended the world-clock globe and pointed out the risk in the Warhammer idea:
+            Games Workshop enforces its IP strictly, which is a bad fit for a public portfolio.
+          </p>
+        </div>
+        <ol class="decisions">
+          <li><b>Scope</b><span>Globe + live satellites, sharing one clock</span><small>My call. Claude flagged the extra scope; I wanted the wow factor.</small></li>
+          <li><b>Hosting</b><span>GitHub Pages via Actions</span><small>Free, and recruiters can read the code behind the URL.</small></li>
+          <li><b>Framing</b><span>Software-developer case study</span><small>Engineering choices up front, so this page exists.</small></li>
+          <li><b>After seeing v1</b><span>Time Board first, orbits as the bonus</span><small>Keep v1's colours, fonts, analog clocks, offset cards and Dark/Cream themes.</small></li>
+          <li><b>Your site</b><span>Auto-detected, changeable</span><small>No more hard-coded Toronto; every Δ follows the visitor.</small></li>
+          <li><b>Groups</b><span>Open to the world, Canada as demo</span><small>2,360 searchable cities, or click anywhere on the globe.</small></li>
+        </ol>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">03</span> What v2 does</h2>
+        <figure class="hero-shot">
+          <img src="./case-study/board.webp" alt="Time Board 3D: a night-side globe of North America with city lights, labelled site pins and arcs from Toronto, beside a panel of clock cards" loading="lazy" width="1600" height="1000" />
+        </figure>
+        <div class="features">
+          <article><h3>Your board, on a planet</h3><p>Every place is a pin on a WebGL Earth. The cards still cluster places that share a clock time, and each card's colour matches its pins and arcs.</p></article>
+          <article><h3>Real day and night</h3><p>The terminator is computed from the sun's position each frame. NASA's Blue Marble and Black Marble imagery blend across it, so city lights switch on as dusk passes.</p></article>
+          <article><h3>Meeting planner</h3><p>Shows each card's working hours on your timeline and highlights when everyone overlaps. Click a column and the whole globe jumps to that moment.</p></article>
+          <article><h3>Scrub time</h3><p>Drag ±24 h or run at up to 1000×, forwards or backwards. Clocks, sunlight and satellites all move together.</p></article>
+          <article><h3>Share by link</h3><p>A group is serialized into the URL, so sending a link shares your board with no accounts and no server.</p></article>
+          <article><h3>Live orbits</h3><p>Over 10,000 real satellites, an orbit ring and predicted passes for any one you pick, and a sky plot of what is above your site right now.</p></article>
+        </div>
+        <div class="gallery">
+          <figure><img src="./case-study/focus.webp" alt="Zoomed in on Newfoundland, with St. John's and Corner Brook pins highlighted half an hour ahead" loading="lazy" width="1600" height="1000" /><figcaption>Focus a card and the camera flies to it. Newfoundland's +1h30m is handled correctly.</figcaption></figure>
+          <figure><img src="./case-study/cream.webp" alt="Cream theme with the meeting planner showing a 3.5-hour shared window" loading="lazy" width="1600" height="1000" /><figcaption>v1's Cream theme, carried over to the globe, with the meeting planner open.</figcaption></figure>
+          <figure class="phone"><img src="./case-study/mobile.webp" alt="Mobile layout with the globe above a bottom sheet" loading="lazy" width="600" height="1299" /><figcaption>On phones the panel becomes a bottom sheet.</figcaption></figure>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">04</span> Architecture</h2>
+        <div class="prose wide">
+          <p>
+            Plain TypeScript, no UI framework. One <code>SimClock</code> is the single source of truth for time: every
+            component reads <code>clock.now()</code>, so a single scrub moves everything consistently.
+          </p>
+        </div>
+        <figure class="diagram">
+          <svg viewBox="0 0 960 430" role="img" aria-label="Architecture diagram: SimClock feeds the globe renderer, Time Board, satellite layer and time bar; data comes from the browser's IANA database, a build-time city index and a CI snapshot of CelesTrak">
+            <defs>
+              <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="arrowhead" /></marker>
+            </defs>
+            <g class="lane"><rect x="10" y="10" width="940" height="120" rx="14" /><text x="28" y="36" class="lane-label">DATA (no backend)</text></g>
+            <g class="node"><rect x="30" y="50" width="200" height="64" rx="10" /><text x="130" y="76">Intl + IANA tz db</text><text x="130" y="96" class="sub">DST rules from the browser</text></g>
+            <g class="node"><rect x="260" y="50" width="200" height="64" rx="10" /><text x="360" y="76">cities.json</text><text x="360" y="96" class="sub">built from MIT dataset</text></g>
+            <g class="node"><rect x="490" y="50" width="200" height="64" rx="10" /><text x="590" y="76">GitHub Action</text><text x="590" y="96" class="sub">CelesTrak → snapshot, 2×/day</text></g>
+            <g class="node"><rect x="720" y="50" width="210" height="64" rx="10" /><text x="825" y="76">URL fragment</text><text x="825" y="96" class="sub">#g= base64url group</text></g>
+
+            <g class="node accent"><rect x="380" y="180" width="200" height="64" rx="10" /><text x="480" y="206">SimClock</text><text x="480" y="226" class="sub">now(), rate, scrub</text></g>
+
+            <g class="node"><rect x="30" y="320" width="210" height="80" rx="10" /><text x="135" y="348">Time Board UI</text><text x="135" y="368" class="sub">offset cards · planner</text><text x="135" y="386" class="sub">Δ vs your site</text></g>
+            <g class="node"><rect x="265" y="320" width="210" height="80" rx="10" /><text x="370" y="348">Globe renderer</text><text x="370" y="368" class="sub">terminator shader</text><text x="370" y="386" class="sub">pins · arcs · labels</text></g>
+            <g class="node"><rect x="500" y="320" width="210" height="80" rx="10" /><text x="605" y="348">Satellite layer</text><text x="605" y="368" class="sub">Worker: SGP4 snapshots</text><text x="605" y="386" class="sub">GPU: p + v·dt + ½a·dt²</text></g>
+            <g class="node"><rect x="735" y="320" width="195" height="80" rx="10" /><text x="832" y="348">Time bar</text><text x="832" y="368" class="sub">±24 h · −1000×…1000×</text><text x="832" y="386" class="sub">keyboard shortcuts</text></g>
+
+            <path d="M832 320 C 832 260, 640 212, 582 212" class="flow" marker-end="url(#arr)" />
+            <path d="M440 244 L 135 318" class="flow" marker-end="url(#arr)" />
+            <path d="M465 244 L 370 318" class="flow" marker-end="url(#arr)" />
+            <path d="M500 244 L 605 318" class="flow" marker-end="url(#arr)" />
+            <path d="M130 114 L 120 318" class="flow faint" marker-end="url(#arr)" />
+            <path d="M360 114 C 360 200, 160 260, 150 318" class="flow faint" marker-end="url(#arr)" />
+            <path d="M650 114 L 650 318" class="flow faint" marker-end="url(#arr)" />
+            <path d="M790 114 L 790 262 Q 790 286 766 286 L 220 286 Q 196 286 190 318" class="flow faint" marker-end="url(#arr)" />
+          </svg>
+          <figcaption>The time bar writes to the clock; everything else reads from it. Data is static files or browser APIs.</figcaption>
+        </figure>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">05</span> Engineering highlights</h2>
+        <div class="highlights">
+          <article>
+            <h3>10,000 satellites at 60 fps</h3>
+            <p>
+              Running SGP4 propagation for every satellite on every frame would drop frames. Instead a Web Worker returns
+              position and velocity snapshots a few times a second, and the vertex shader moves each point with a
+              second-order step under two-body gravity, <code>p + v·dt + ½·a·dt²</code>. Motion stays smooth at 1000× with
+              a worker that is idle most of the time.
+            </p>
+          </article>
+          <article>
+            <h3>DST-correct by construction</h3>
+            <p>
+              There are no hand-written offset tables. Offsets, abbreviations and wall-clock conversions all go through
+              <code>Intl.DateTimeFormat</code> and IANA zone names. The tests prove the v1 card logic regroups correctly in
+              winter: Whitehorse joins Calgary, and Regina joins Winnipeg, because Saskatchewan and Yukon don't change
+              their clocks.
+            </p>
+          </article>
+          <article>
+            <h3>A data pipeline that's polite</h3>
+            <p>
+              The cloud sandbox Claude Code ran in couldn't reach CelesTrak, the public orbital-data source, so we changed the
+              design. A scheduled GitHub Action fetches a fresh snapshot twice a day and ships it with the site. Visitors
+              load satellites from the same origin, CelesTrak gets 2 requests a day instead of one per visitor, and the app
+              still falls back to a live fetch if the snapshot is stale.
+            </p>
+          </article>
+          <article>
+            <h3>Physically placed sunlight</h3>
+            <p>
+              The sun's sub-solar point comes from the Astronomical Almanac's low-precision formula, accurate to about
+              0.01°, and is tested against the 2024 solstice and equinox. The Earth shader blends the day and night maps
+              across a soft terminator, adds an ocean glint from a water mask, and a fresnel atmosphere.
+            </p>
+          </article>
+          <article>
+            <h3>Labels that don't collide</h3>
+            <p>
+              Pins carry HTML labels that follow them in 3D. A greedy pass places them each frame in priority order (hovered,
+              your site, focused, card leads) and drops any that would overlap. Labels near the right edge flip to the left,
+              and labels behind the Earth are hidden by a ray–sphere occlusion test.
+            </p>
+          </article>
+          <article>
+            <h3>Zero-backend sharing</h3>
+            <p>
+              Groups are UTF-8 encoded and base64url'd into the URL fragment, so they never reach a server log. On the way
+              back in, every field is validated: coordinates are bounds-checked, time zones are verified, and lengths are
+              capped.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">06</span> Bugs caught in review</h2>
+        <div class="prose wide">
+          <p>
+            Claude Code drove a headless Chromium browser, screenshotted every mode, and we reviewed the images together.
+            Typecheck and unit tests passed throughout; these issues only showed up visually:
+          </p>
+        </div>
+        <ul class="bugs">
+          <li><b>Overlapping labels.</b> Regina was hidden under Winnipeg. <span>→ priority-based collision pass.</span></li>
+          <li><b>Black halo in Cream theme.</b> The atmosphere shader wrote alpha = 1, which normal blending paints solid. <span>→ output the glow as alpha.</span></li>
+          <li><b>Flat orbit ring.</b> The camera flew to directly above the satellite, which sits in its own orbital plane, so the ring was seen edge-on. <span>→ tilt along the orbit normal.</span></li>
+          <li><b>Panel wouldn't scroll.</b> A flex child without <code>min-height: 0</code>. <span>→ one line of CSS.</span></li>
+          <li><b>Giant pins when zoomed in.</b> Markers were sized in world units. <span>→ scale with camera distance.</span></li>
+          <li><b>Muddy twilight band.</b> A tint along the terminator read as a stripe. <span>→ removed; the blend alone looks better.</span></li>
+        </ul>
+      </section>
+
+      <section class="block">
+        <h2><span class="num">07</span> How I worked with Claude Code</h2>
+        <div class="prose wide">
+          <p>
+            My job was the product decisions: scope, audience, which parts of v1 had to survive, and what “good” looked
+            like. Claude Code's job was the implementation, plus the questions I hadn't thought to ask. It planned the
+            architecture, wrote the TypeScript and shaders, wrote and ran the tests, set up CI, and checked its own work in a
+            real browser.
+          </p>
+          <p>What made it work:</p>
+          <ul>
+            <li><b>Ask before building.</b> Two rounds of multiple-choice questions turned a vague brief into a spec in minutes.</li>
+            <li><b>Bring prior work.</b> Sharing v1 gave it a design language to keep, instead of a blank page.</li>
+            <li><b>Make it prove things.</b> Tests for the logic, screenshots for the visuals. Most of the real bugs above were caught by looking.</li>
+            <li><b>Treat blockers as design input.</b> The network restriction turned into a better data architecture.</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="block two-col">
+        <div>
+          <h2><span class="num">08</span> Stack</h2>
+          <ul class="tags">
+            <li>TypeScript</li><li>Three.js / WebGL</li><li>GLSL shaders</li><li>satellite.js (SGP4)</li><li>Web Workers</li>
+            <li>Vite</li><li>Vitest</li><li>GitHub Actions</li><li>GitHub Pages</li><li>Claude Code</li>
+          </ul>
+        </div>
+        <div>
+          <h2>Keyboard</h2>
+          <dl class="keys">
+            <div><dt><kbd>Space</kbd></dt><dd>Pause / play</dd></div>
+            <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>±15 min (Shift: ±1 h)</dd></div>
+            <div><dt><kbd>[</kbd> <kbd>]</kbd></dt><dd>Slower / faster</dd></div>
+            <div><dt><kbd>N</kbd></dt><dd>Back to now</dd></div>
+            <div><dt><kbd>1</kbd> <kbd>2</kbd></dt><dd>Time Board / Live Orbits</dd></div>
+            <div><dt><kbd>T</kbd></dt><dd>Dark / Cream</dd></div>
+          </dl>
+        </div>
+      </section>
+
+      <section class="block credits">
+        <h2>Credits</h2>
+        <p>
+          Earth imagery: NASA Blue Marble &amp; Black Marble (public domain), via the three-globe examples. Orbital
+          elements: <a href="https://celestrak.org" target="_blank" rel="noopener">CelesTrak</a>. City index: city-timezones
+          (MIT). Ocean time zones: @photostructure/tz-lookup (CC0). Fonts: Space Grotesk &amp; JetBrains Mono (OFL).
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <a class="btn primary" href="./">Try Time Board 3D →</a>
+      <p>Built by Deven Chandel with Claude Code · <a href="https://github.com/Deven-Chandel/Project-Delta" target="_blank" rel="noopener">github.com/Deven-Chandel/Project-Delta</a></p>
+    </footer>
+    <script type="module" src="/src/about.ts"></script>
+  </body>
+</html>
