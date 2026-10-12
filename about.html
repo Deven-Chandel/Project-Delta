@@ -38,7 +38,7 @@
       </div>
       <img class="hero-phone" src="./case-study/mobile.webp" alt="The board on a phone: NSOC clock, converter and timeline rows" width="600" height="1299" />
       <dl class="stats">
-        <div><dt>Unit tests</dt><dd>48</dd></div>
+        <div><dt>Unit tests</dt><dd>56</dd></div>
         <div><dt>End-to-end checks</dt><dd>13</dd></div>
         <div><dt>Lines removed</dt><dd>~2,900</dd></div>
         <div><dt>Backend servers</dt><dd>0</dd></div>
@@ -119,8 +119,13 @@
           <article><h3>Paste-ready reports</h3><p><code>14:00 ET / 13:00 CT / … / 15:30 NT</code>, ordered the way Canadian ops reports read: NSOC first, then west, then east.</p></article>
           <article><h3>Events and countdowns</h3><p>Broadcasts, maintenance windows and shift changes. Each shows a live countdown, the local time everywhere, and how many sites are staffed at the start.</p></article>
           <article><h3>Shift coverage</h3><p>Group-wide or per-site hours. Overnight shifts and 24 h coverage both work, and so do the 23 h and 25 h days when clocks change.</p></article>
+          <article><h3>Every site in an area</h3><p>Hover the map (Globe or Flat) and one popup lists every site there, grouped by clock, with local time and staffing. Expand it, go full screen, or drag the dividers to size it.</p></article>
           <article><h3>Anyone's sites</h3><p>Make a group, add any of 2,360 cities or click the map, and share it by link. The recipient gets your sites, hours and events, measured from <em>their</em> NSOC.</p></article>
         </div>
+        <figure>
+          <img src="./case-study/map.webp" alt="Expanded flat map: hovering over British Columbia lists four sites with local time and staffing" loading="lazy" width="1600" height="1000" />
+          <figcaption>Expanded flat map. Hovering over British Columbia lists all four sites there, so you don't have to hunt for overlapping pins.</figcaption>
+        </figure>
         <figure>
           <img src="./case-study/cream.webp" alt="Cream theme: an 18:00 newscast converted to every site, with St. John's and Corner Brook in an expanded table" loading="lazy" width="1600" height="1000" />
           <figcaption>A sample newscast converted to every site in the Cream theme. Expanding a row gives the per-site table, which is the accessible “table view” of the chart.</figcaption>
@@ -186,6 +191,9 @@
           <li><b>Two Kingstons.</b> The tooltip matched sites by name, so same-named sites mixed up their counts. <span>→ sites are matched by their clock.</span></li>
           <li><b>Stale warnings, stale titles.</b> A DST warning, or the previous event's title, stayed up after a new conversion. <span>→ every conversion resets both.</span></li>
           <li><b>The window jumped.</b> Converting a time re-centred the timeline and hid the now line. <span>→ the window stays anchored on now.</span></li>
+          <li><b>Board wouldn't scroll (found by me, after launch).</b> With rows expanded, a CSS grid squashed the timeline instead of scrolling. <span>→ one line, <code>grid-auto-rows: max-content</code>, now tested with every row open.</span></li>
+          <li><b>Hover focus that never let go.</b> Passing the mouse over a timeline row dimmed the map until you hovered another row. <span>→ hover and click highlights are now separate.</span></li>
+          <li><b>Double-click also added a site.</b> Zooming the flat map with a double-click counted as two clicks. <span>→ single clicks wait 260 ms for a possible double-click.</span></li>
           <li><b>Hover lag (v2).</b> Picking among 11,000 satellites took 30 ms per mouse move. <span>→ 0.56 ms, before satellites were cut.</span></li>
         </ul>
       </section>
@@ -225,6 +233,7 @@
             <div><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd>Move crosshair 15 min (Shift: 1 h)</dd></div>
             <div><dt><kbd>Enter</kbd></dt><dd>Convert that time</dd></div>
             <div><dt><kbd>N</kbd></dt><dd>Back to now</dd></div>
+            <div><dt><kbd>M</kbd> <kbd>F</kbd></dt><dd>Bigger map / full screen</dd></div>
             <div><dt><kbd>T</kbd></dt><dd>Dark / Cream</dd></div>
           </dl>
         </div>

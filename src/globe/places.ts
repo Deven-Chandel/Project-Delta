@@ -6,17 +6,12 @@ import * as THREE from 'three';
 import { arcPoints, latLonToVec3 } from '../core/geo';
 import { pad2, zonedParts } from '../core/tz';
 import type { Place } from '../core/types';
+import { placeLabels, wantsLabel, type LabelCandidate } from '../map/labels';
+import type { MarkerSpec, NearSite } from '../map/types';
 import type { Globe } from './Globe';
 import { arcFragment, arcVertex } from './shaders';
 
-export interface MarkerSpec {
-  place: Place;
-  color: string;
-  /** Offset-group key; places sharing a key share a card on the board. */
-  key: number;
-  /** One place per key is the group's "lead" and keeps its label when nothing is focused. */
-  lead: boolean;
-}
+export type { MarkerSpec } from '../map/types';
 
 interface Marker {
   spec: MarkerSpec;
@@ -71,6 +66,18 @@ export class PlacesLayer {
 
   hover(placeId: string | null): void {
     this.hoverId = placeId;
+  }
+
+  /** Every visible marker within `radius` px of a point, nearest first. */
+  sitesNear(x: number, y: number, radius: number): NearSite[] {
+    const out: NearSite[] = [];
+    for (const m of this.all()) {
+      const p = this.globe.project(m.pos);
+      if (!p.visible) continue;
+      const d = Math.hypot(p.x - x, p.y - y);
+      if (d <= radius) out.push({ place: m.spec.place, key: m.spec.key, color: m.spec.color, isNsoc: m === this.home, d });
+    }
+    return out.sort((a, b) => a.d - b.d);
   }
 
   /** Nearest marker to a screen point, within `radius` pixels. */
@@ -182,10 +189,12 @@ export class PlacesLayer {
       (this.homeRing.material as THREE.MeshBasicMaterial).opacity = 0.9 * (1 - pulse);
     }
 
-    const zoomedIn = this.globe.distance < 1.75;
+    // Zoomed in far enough to read a region: label every site (collisions still apply).
+    const zoomedIn = this.globe.distance < 2.25;
     // Keep pins a similar on-screen size at every zoom level.
     const zoomScale = Math.min(1, Math.max(0.4, (this.globe.distance - 1) / 1.8));
-    const candidates: { m: Marker; prio: number; x: number; y: number; facing: number }[] = [];
+    const cands: LabelCandidate[] = [];
+    const hidden: HTMLElement[] = [];
     for (const m of this.all()) {
       const isHome = m === this.home;
       const focused = this.focusKey !== null && m.spec.key === this.focusKey;
@@ -201,40 +210,15 @@ export class PlacesLayer {
         u.time.value = this.elapsed;
         u.opacity.value = focused || hovered ? 1 : dimmed ? 0.12 : 0.45;
       }
-      m.label.classList.toggle('hot', hovered || focused);
 
-      const wanted = isHome || hovered || focused || (this.focusKey === null && (m.spec.lead || zoomedIn));
+      const c = { isNsoc: isHome, hovered, focused, lead: m.spec.lead };
       const p = this.globe.project(m.pos);
-      if (!wanted || !p.visible || p.facing < 0.12) {
-        m.label.classList.remove('show');
+      if (!wantsLabel(c, this.focusKey !== null, zoomedIn) || !p.visible || p.facing < 0.12) {
+        hidden.push(m.label);
         continue;
       }
-      const prio = hovered ? 0 : isHome ? 1 : focused ? 2 : m.spec.lead ? 3 : 4;
-      candidates.push({ m, prio, x: p.x, y: p.y, facing: p.facing });
+      cands.push({ ...c, label: m.label, name: m.spec.place.name, x: p.x, y: p.y, opacity: Math.min(1, (p.facing - 0.12) * 5) });
     }
-
-    // Greedy collision avoidance: higher-priority labels claim space first.
-    candidates.sort((a, b) => a.prio - b.prio);
-    const placed: [number, number, number, number][] = [];
-    const maxX = this.globe.overlay.clientWidth - 8;
-    for (const c of candidates) {
-      const w = c.m.spec.place.name.length * 7 + (c.m === this.home ? 112 : 58);
-      // Labels that would run off the right edge sit to the left of their pin.
-      const flip = c.x + 10 + w > maxX;
-      const left = flip ? c.x - w - 10 : c.x + 10;
-      const box: [number, number, number, number] = [left, c.y - 31, left + w, c.y - 9];
-      const hit = placed.some((b) => box[0] < b[2] && box[2] > b[0] && box[1] < b[3] && box[3] > b[1]);
-      if (hit && c.prio > 1) {
-        c.m.label.classList.remove('show');
-        continue;
-      }
-      placed.push(box);
-      c.m.label.classList.add('show');
-      c.m.label.classList.toggle('flip', flip);
-      const x = flip ? c.x - w - 20 : c.x;
-      c.m.label.style.transform = `translate3d(${x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`;
-      c.m.label.style.opacity = String(Math.min(1, (c.facing - 0.12) * 5));
-      c.m.label.style.zIndex = String(10 - c.prio);
-    }
+    placeLabels(cands, hidden, this.globe.overlay.clientWidth);
   }
 }

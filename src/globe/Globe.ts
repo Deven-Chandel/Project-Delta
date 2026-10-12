@@ -55,6 +55,7 @@ export class Globe {
   private pointerDown: { x: number; y: number; t: number } | null = null;
   private clickHandlers = new Set<(e: { x: number; y: number; lat: number | null; lon: number | null }) => void>();
   private moveHandlers = new Set<(x: number, y: number) => void>();
+  private leaveHandlers = new Set<() => void>();
   private interacted = false;
   private insets = { left: 0, top: 0, bottom: 0 };
   private previewTime: number | null = null;
@@ -224,6 +225,16 @@ export class Globe {
     this.moveHandlers.add(fn);
   }
 
+  onPointerLeave(fn: () => void): void {
+    this.leaveHandlers.add(fn);
+  }
+
+  /** Stop rendering while the globe is hidden; resume when shown. */
+  setActive(active: boolean): void {
+    this.renderer.setAnimationLoop(active ? () => this.frame() : null);
+    if (active) this.resize();
+  }
+
   setTheme(theme: Theme): void {
     const cream = theme === 'cream';
     this.renderer.setClearColor(cream ? 0xefe8d8 : 0x05070c);
@@ -335,6 +346,9 @@ export class Globe {
       const ll = this.latLonAt(e.clientX, e.clientY);
       for (const fn of this.clickHandlers)
         fn({ x: e.clientX - rect.left, y: e.clientY - rect.top, lat: ll?.lat ?? null, lon: ll?.lon ?? null });
+    });
+    el.addEventListener('pointerleave', (e) => {
+      if (e.pointerType === 'mouse') for (const fn of this.leaveHandlers) fn();
     });
     el.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'mouse') return;

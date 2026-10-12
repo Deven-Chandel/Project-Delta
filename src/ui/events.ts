@@ -42,7 +42,7 @@ export class EventsPanel {
       this.formEl,
       this.listEl,
     );
-    store.subscribe(() => (this.lastRender = 0));
+    store.subscribe(() => this.render(Date.now()));
   }
 
   tick(now: number): void {

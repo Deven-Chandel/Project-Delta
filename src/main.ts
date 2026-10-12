@@ -6,17 +6,16 @@ import './styles.css';
 
 import { SimClock } from './core/clock';
 import { countdownLabel } from './core/countdown';
-import { slotColor } from './core/palette';
 import { buildRows } from './core/rows';
 import { decodeGroup } from './core/share';
 import { makeGroup, store, uid } from './core/store';
 import { offsetMinutes, pad2, tzAbbr, zonedParts } from './core/tz';
 import type { Theme } from './core/types';
-import type { Globe } from './globe/Globe';
-import type { MarkerSpec, PlacesLayer } from './globe/places';
 import { Converter } from './ui/converter';
 import { $, h, icon, toast } from './ui/dom';
 import { EventsPanel } from './ui/events';
+import { Layout } from './ui/layout';
+import { MapPanel } from './ui/mapPanel';
 import { NsocDialog } from './ui/nsoc';
 import { SitesPanel } from './ui/sites';
 import { TimelineBoard } from './ui/timeline';
@@ -41,68 +40,36 @@ $('#pane-board').append(converter.el, timeline.el);
 $('#pane-events').append(events.el);
 $('#pane-sites').append(sites.el);
 
-// ── Map (lazy on phones, never fatal) ───────────────────────────────────
-let globe: Globe | null = null;
-let places: PlacesLayer | null = null;
-let globeFailed = false;
-let mapLoading: Promise<void> | null = null;
+// ── Map (Globe | Flat, lazy, never fatal) ──────────────────────────────
 const clock = new SimClock();
-
-function ensureMap(): Promise<void> {
-  mapLoading ??= loadMap();
-  return mapLoading;
-}
-
-async function loadMap(): Promise<void> {
-  if (globe || globeFailed) return;
-  try {
-    const [{ Globe }, { PlacesLayer }] = await Promise.all([import('./globe/Globe'), import('./globe/places')]);
-    globe = new Globe($('#globe'), clock);
-    places = new PlacesLayer(globe);
-    globe.setTheme(store.get().theme);
-    globe.onClick((e) => {
-      const hit = places!.pick(e.x, e.y);
-      if (hit) {
-        if (hit.id !== 'nsoc') view.fly(offsetMinutes(hit.tz, Date.now()));
-        return;
-      }
-      if (e.lat !== null && e.lon !== null) void sites.proposeAt(e.lat, e.lon);
-    });
-    globe.onPointerMove((x, y) => {
-      const p = places!.pick(x, y);
-      places!.hover(p?.id ?? null);
-      globe!.renderer.domElement.style.cursor = p ? 'pointer' : '';
-    });
-    refreshMarkers();
-    globe.ready.then(() => fitGroup(1));
-  } catch (err) {
-    console.error(err);
-    globeFailed = true;
-    $('#globe').replaceChildren(h('div', { class: 'no-webgl' }, h('b', {}, 'Map unavailable'), h('span', {}, 'This browser has WebGL turned off. The board, converter and events all still work.')));
-  }
-}
+const map = new MapPanel($('#pane-map'), clock, {
+  onPropose: (lat, lon) => void sites.proposeAt(lat, lon),
+  onFocusRow: (key) => {
+    view.set({ focusKey: key });
+    if (mobile()) setTab('board');
+  },
+  onToggleExpand: () => layout.toggleExpand(),
+});
+const layout = new Layout($('.side'), $('#pane-map'), (expanded) => {
+  map.setExpanded(expanded);
+  // Re-frame the sites once the new size has been laid out.
+  setTimeout(() => map.fit([], 600), 60);
+});
+map.setExpanded(layout.isExpanded);
 
 function refreshMarkers(): void {
-  if (!places) return;
   const s = store.get();
   const t = view.get().eventAt ?? Date.now();
-  const rows = buildRows(store.activeGroup(), s.nsoc, t);
-  const specs: MarkerSpec[] = [];
-  const isNsoc = (p: { tz: string; lat: number; lon: number }) => p.tz === s.nsoc.tz && Math.abs(p.lat - s.nsoc.lat) < 0.05 && Math.abs(p.lon - s.nsoc.lon) < 0.05;
-  for (const r of rows) {
-    // The NSOC has its own marker; don't draw a second pin for it as a site.
-    const sitesHere = r.sites.filter((x) => !isNsoc(x.place));
-    sitesHere.forEach((site, i) => specs.push({ place: site.place, color: slotColor(r.slot, s.theme), key: r.key, lead: i === 0 }));
-  }
-  places.setPlaces(specs, s.nsoc);
-  places.focus(view.get().focusKey);
+  map.update(buildRows(store.activeGroup(), s.nsoc, t), s.nsoc, s.theme);
+  map.focus(view.highlight());
 }
 
 function fitGroup(duration = 1400): void {
-  if (!globe) return;
   const s = store.get();
   const g = store.activeGroup();
-  globe.fitPlaces(g.places.length ? [...g.places, s.nsoc] : [s.nsoc], duration);
+  const pts = g.places.length ? [...g.places, s.nsoc] : [s.nsoc];
+  map.setFitTarget(pts);
+  map.fit(pts, duration);
 }
 
 // ── Tabs (phone) and side tabs (desktop) ────────────────────────────────
@@ -110,7 +77,7 @@ function setTab(tab: Tab): void {
   document.body.dataset.tab = tab;
   document.querySelectorAll<HTMLButtonElement>('.tabbar [data-tab]').forEach((b) => b.toggleAttribute('aria-current', b.dataset.tab === tab));
   if (tab === 'events' || tab === 'sites') setSide(tab);
-  if (tab === 'map' || !mobile()) void ensureMap();
+  if (tab === 'map' || !mobile()) map.start();
 }
 function setSide(side: 'events' | 'sites'): void {
   document.body.dataset.side = side;
@@ -148,7 +115,7 @@ themeButtons.forEach((b) => b.addEventListener('click', () => store.update((d) =
 function applyTheme(theme: Theme): void {
   document.documentElement.dataset.theme = theme;
   themeButtons.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.themeBtn === theme)));
-  globe?.setTheme(theme);
+  map.setTheme(theme);
 }
 
 store.subscribe((s, prev) => {
@@ -158,17 +125,19 @@ store.subscribe((s, prev) => {
   if (s.activeGroupId !== prev.activeGroupId || s.nsoc.tz !== prev.nsoc.tz || s.nsoc.name !== prev.nsoc.name) fitGroup();
 });
 view.subscribe((v, prev) => {
-  globe?.setPreviewTime(v.hoverAt ?? v.eventAt);
+  map.setPreviewTime(v.hoverAt ?? v.eventAt);
   if (v.eventAt !== prev.eventAt) refreshMarkers();
-  if (v.focusKey !== prev.focusKey) places?.focus(v.focusKey);
-  if (v.flySeq !== prev.flySeq && globe && v.focusKey !== null) {
+  if (v.focusKey !== prev.focusKey || v.hoverKey !== prev.hoverKey) map.focus(view.highlight());
+  if (v.flySeq !== prev.flySeq && v.focusKey !== null) {
     const ps = store.activeGroup().places.filter((p) => offsetMinutes(p.tz, v.eventAt ?? Date.now()) === v.focusKey);
-    if (ps.length) globe.fitPlaces(ps);
-    if (mobile()) setTab('map');
+    if (ps.length) map.fit(ps);
+    if (mobile() && v.flyShow) setTab('map');
   }
 });
 renderGroupSelect();
 applyTheme(store.get().theme);
+refreshMarkers();
+fitGroup(1);
 
 // ── One loop drives every clock on the page ────────────────────────────
 let lastSecond = -1;
@@ -206,7 +175,10 @@ addEventListener('keydown', (e) => {
   const t = e.target as HTMLElement;
   if (t.closest('input, select, textarea, dialog, [contenteditable]') || e.metaKey || e.ctrlKey || e.altKey) return;
   if (e.key === 'n' || e.key === 'N') view.set({ eventAt: null, eventTitle: '' });
+  if (e.key === 'Escape') view.set({ focusKey: null });
   if (e.key === 't' || e.key === 'T') store.update((d) => (d.theme = d.theme === 'dark' ? 'cream' : 'dark'));
+  if ((e.key === 'm' || e.key === 'M') && !mobile()) layout.toggleExpand();
+  if (e.key === 'f' || e.key === 'F') map.toggleFullscreen();
 });
 
 /** #g=<token> imports a shared group (with its hours and events). */

@@ -203,7 +203,7 @@ export class SitesPanel {
           { class: 'site' },
           h(
             'button',
-            { type: 'button', class: 'site-main', title: `Show ${p.name} on the map`, onclick: () => view.fly(offsetMinutes(p.tz, Date.now())) },
+            { type: 'button', class: 'site-main', title: `Show ${p.name} on the map`, onclick: () => view.fly(offsetMinutes(p.tz, Date.now()), true) },
             h('b', {}, p.name),
             h('small', {}, [p.region, formatOffset(offsetMinutes(p.tz, now))].filter(Boolean).join(' · ')),
             isNsoc ? h('span', { class: 'badge' }, 'NSOC') : null,

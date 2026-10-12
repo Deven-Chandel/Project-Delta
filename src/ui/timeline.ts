@@ -15,6 +15,7 @@ import { axisWindow, fracToTime, lightBands, localTicks, timeToFrac } from '../c
 import { formatDelta, formatOffset, offsetMinutes, pad2, tzLabel, zonedParts, type Interval } from '../core/tz';
 import type { Group, Place } from '../core/types';
 import { AnalogClock } from './analog';
+import { coverageText } from './coverage';
 import { h, icon } from './dom';
 import { view } from './view';
 
@@ -77,7 +78,7 @@ export class TimelineBoard {
     view.subscribe((v, prev) => {
       if (v.eventAt !== prev.eventAt) this.sig = '';
       if (v.hoverAt !== prev.hoverAt) this.renderCross();
-      if (v.focusKey !== prev.focusKey) this.markFocus();
+      if (v.focusKey !== prev.focusKey || v.hoverKey !== prev.hoverKey) this.markFocus();
     });
   }
 
@@ -223,7 +224,8 @@ export class TimelineBoard {
     const track = h('div', { class: 'tl-track' }, ...bands, ...any.map((iv) => bar(iv, 'some')), ...all.map((iv) => bar(iv, 'all')), ...ticks);
 
     const el = h('div', { class: `tl-row${row.isNsoc ? ' nsoc' : ''}`, 'data-key': row.key, style: `--c:${color}` }, label, track);
-    el.addEventListener('mouseenter', () => view.set({ focusKey: row.key }));
+    el.addEventListener('mouseenter', () => view.set({ hoverKey: row.key }));
+    el.addEventListener('mouseleave', () => view.get().hoverKey === row.key && view.set({ hoverKey: null }));
     return { row, el, analog, time, cover };
   }
 
@@ -296,7 +298,7 @@ export class TimelineBoard {
       }
       view.set({ hoverAt: tAt(e.clientX) });
     });
-    this.body.addEventListener('pointerleave', () => view.set({ hoverAt: null }));
+    this.body.addEventListener('pointerleave', () => view.set({ hoverAt: null, hoverKey: null }));
     this.body.addEventListener('click', (e) => {
       if (!(e.target as HTMLElement).closest('.tl-track')) return;
       view.set({ eventAt: tAt(e.clientX), eventTitle: '', hoverAt: null });
@@ -352,18 +354,7 @@ export class TimelineBoard {
   }
 
   private markFocus(): void {
-    const k = view.get().focusKey;
+    const k = view.highlight();
     for (const rv of this.rows) rv.el.classList.toggle('focused', rv.row.key === k);
   }
-}
-
-export function coverageText(state: string, until: number | null, tz: string): HTMLElement {
-  const at = (t: number) => {
-    const z = zonedParts(tz, t);
-    return `${pad2(z.hour)}:${pad2(z.minute)}`;
-  };
-  if (state === 'none') return h('span', { class: 'st unset' }, icon('dot', 12), 'Not set');
-  if (state === 'on') return h('span', { class: 'st ok' }, icon('check', 12), until ? `Staffed until ${at(until)}` : 'Staffed 24 h');
-  if (state === 'ending') return h('span', { class: 'st warn' }, icon('ending', 12), `Ends ${until ? at(until) : ''}`);
-  return h('span', { class: 'st off' }, icon('off', 12), until ? `Off · opens ${at(until)}` : 'Off');
 }

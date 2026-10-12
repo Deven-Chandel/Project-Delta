@@ -20,7 +20,9 @@ report. This board does that one job:
 | **Shift / on-air hours** | Per group or per site. Overnight shifts (22:00–06:00) and 24 h coverage both work, including on 23 h and 25 h DST days. |
 | **Your own sites** | Make a group, add sites from 2,360 cities or by clicking the map, and share it by link (hours and events included). Groups are saved in the browser, with JSON backup and import. |
 | **NSOC reference** | Chosen once on first visit (suggested from your time zone). Every Δ is measured from it. |
-| **Map** | A secondary 3D globe showing where the sites are and where it is daylight, following the crosshair or converted time. |
+| **Map: Globe or Flat** | A 3D globe or a flat map (pan, scroll or pinch to zoom, wraps at the date line), both with live day and night and city lights. Hover any area and a popup lists **every site there**, grouped by clock, with local time and staffing (tap on phones). Zoom in and every site gets a label. **Expand**, **Full screen**, or drag the dividers to size the map, and your layout is remembered. |
+
+![Expanded flat map: hovering over British Columbia lists Kamloops, Vancouver, Kelowna and Victoria with their local time and staffing](public/case-study/map.webp)
 
 <p>
   <img src="public/case-study/cream.webp" width="64%" alt="Cream theme: an 18:00 newscast converted to every site, with Newfoundland expanded into its per-site table" />
@@ -35,6 +37,7 @@ Plain TypeScript and Vite, with no UI framework and no backend. All time logic l
 - `shifts.ts` handles staffed windows, including ones that wrap past midnight, and coverage at a given moment.
 - `report.ts` and `abbr.ts` build report lines. Overrides cover zones that Intl names badly, such as Whitehorse (MST all year) and Regina (CST all year).
 - `rows.ts` is the single row model shared by the timeline, the tooltip, the map and the converter.
+- `flatproj.ts` is the flat map's projection: wrap-around at the date line, zoom around the cursor, and short-way-round fitting.
 - `palette.ts` has eight fixed colours, checked against both themes with a colourblind-safety validator. A ninth group gets grey instead of a new colour.
 - `migrate.ts` upgrades saved data from the previous version, and `share.ts` still decodes v1 share links.
 
@@ -42,7 +45,8 @@ Plain TypeScript and Vite, with no UI framework and no backend. All time logic l
 src/core/   time zones, conversion, shifts, reports, countdowns, palette, storage (pure)
 src/ui/     timeline board, converter, events, sites, NSOC dialog (plain DOM)
 src/globe/  three.js map: Earth shader with real-time terminator, pins, labels
-tests/      48 Vitest tests: DST days, half-hour zones, overnight shifts, date line, migration, share links
+src/map/    flat map (canvas), shared label placement, Globe | Flat interface
+tests/      56 Vitest tests: DST days, half-hour zones, overnight shifts, date line, migration, share links
 ```
 
 ## Run it locally
@@ -50,13 +54,13 @@ tests/      48 Vitest tests: DST days, half-hour zones, overnight shifts, date l
 ```bash
 npm install
 npm run dev     # http://localhost:5173
-npm test        # 48 unit tests
+npm test        # 56 unit tests
 npm run build   # typecheck + production build to dist/
 ```
 
 ## Keyboard
 
-`←` `→` move the crosshair 15 min (Shift: 1 h) · `Enter` convert that time · `N` back to now · `T` theme
+`←` `→` move the crosshair 15 min (Shift: 1 h) · `Enter` convert that time · `N` back to now · `M` bigger map · `F` full-screen map · `Esc` clear highlight · `T` theme
 
 ## History
 
