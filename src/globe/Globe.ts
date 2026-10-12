@@ -309,9 +309,16 @@ export class Globe {
     const rect = this.renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
     this.raycaster.setFromCamera(ndc, this.camera);
-    const hit = this.raycaster.intersectObject(this.earth, false)[0];
-    if (!hit) return null;
-    return vec3ToLatLon([hit.point.x, hit.point.y, hit.point.z]);
+    // Earth is a unit sphere at the origin, so intersect analytically instead
+    // of testing ~25k triangles of the render mesh.
+    const { origin: o, direction: d } = this.raycaster.ray;
+    const b = o.dot(d);
+    const disc = b * b - (o.lengthSq() - 1);
+    if (disc < 0) return null;
+    const t = -b - Math.sqrt(disc);
+    if (t < 0) return null;
+    const hit = o.clone().addScaledVector(d, t);
+    return vec3ToLatLon([hit.x, hit.y, hit.z]);
   }
 
   private bindPointer(): void {

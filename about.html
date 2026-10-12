@@ -222,6 +222,7 @@
           <li><b>Flat orbit ring.</b> The camera flew to directly above the satellite, which sits in its own orbital plane, so the ring was seen edge-on. <span>→ tilt along the orbit normal.</span></li>
           <li><b>Panel wouldn't scroll.</b> A flex child without <code>min-height: 0</code>. <span>→ one line of CSS.</span></li>
           <li><b>Giant pins when zoomed in.</b> Markers were sized in world units. <span>→ scale with camera distance.</span></li>
+          <li><b>Hover lag with real data.</b> The first CI deploy pulled 10,656 Starlink satellites, about 3× the test set. Stress-testing at that size showed each hover pick taking ~30 ms, because it allocated vectors for every satellite. <span>→ allocation-free projection through one matrix: 0.56 ms (54× faster).</span></li>
           <li><b>Muddy twilight band.</b> A tint along the terminator read as a stripe. <span>→ removed; the blend alone looks better.</span></li>
         </ul>
       </section>

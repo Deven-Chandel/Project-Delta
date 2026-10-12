@@ -97,6 +97,10 @@ export class SatelliteLayer {
   private listeners = new Set<() => void>();
   private skyWaiters = new Map<number, (v: [number, number, number, number][]) => void>();
   private skySeq = 0;
+  private pickMatrix = new THREE.Matrix4();
+  private pickVec = new THREE.Vector3();
+  private hoverAt: [number, number] = [0, 0];
+  private hoverQueued = false;
 
   constructor(
     private readonly globe: Globe,
@@ -282,39 +286,81 @@ export class SatelliteLayer {
     return r.cross(v).normalize().transformDirection(this.globe.inertial.matrixWorld);
   }
 
+  /**
+   * Nearest satellite to a screen point. Runs over every satellite on each
+   * hover, so it does the extrapolation and projection with plain arithmetic
+   * through one combined matrix (no per-satellite allocations), and only runs
+   * the Earth-occlusion test on points that are already close to the cursor.
+   */
   pick(x: number, y: number, radius = 14): number | null {
-    if (!this.visible) return null;
-    const sim = this.clock.now();
-    const v = new THREE.Vector3();
+    if (!this.visible || this.sats.length === 0) return null;
+    const { camera, renderer } = this.globe;
+    const el = renderer.domElement;
+    const w = el.clientWidth;
+    const h = el.clientHeight;
+    camera.updateMatrixWorld();
+    const e = this.pickMatrix
+      .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse)
+      .multiply(this.globe.inertial.matrixWorld).elements;
+
+    const dt = (this.clock.now() - this.snapshotTime) / 1000;
+    const half = 0.5 * dt * dt;
+    const pos = this.pos;
+    const vel = this.vel;
+    const r2max = radius * radius;
     let best: number | null = null;
-    let bestD = radius;
+    let bestD = Infinity;
+    const cand = this.pickVec;
+
     for (let i = 0; i < this.sats.length; i++) {
-      if (!this.worldPosition(i, sim, v)) continue;
-      const p = this.globe.project(v);
-      if (!p.visible) continue;
-      const d = Math.hypot(p.x - x, p.y - y);
+      const j = i * 3;
+      const px = pos[j], py = pos[j + 1], pz = pos[j + 2];
+      const rr = px * px + py * py + pz * pz;
+      if (rr < 1e6) continue;
+      const k = (-MU / (rr * Math.sqrt(rr))) * half;
+      // ECI km → globe-local units (x, z, −y), same as the vertex shader.
+      const lx = (px + vel[j] * dt + k * px) * KM;
+      const ly = (pz + vel[j + 2] * dt + k * pz) * KM;
+      const lz = -(py + vel[j + 1] * dt + k * py) * KM;
+      const cw = e[3] * lx + e[7] * ly + e[11] * lz + e[15];
+      if (cw <= 0) continue;
+      const sx = (((e[0] * lx + e[4] * ly + e[8] * lz + e[12]) / cw + 1) / 2) * w;
+      const sy = ((1 - (e[1] * lx + e[5] * ly + e[9] * lz + e[13]) / cw) / 2) * h;
+      const dx = sx - x;
+      const dy = sy - y;
+      let d2 = dx * dx + dy * dy;
+      if (d2 > r2max) continue;
       // Prefer bigger targets (stations) when overlapping.
-      const bias = this.sats[i].dataset === 'stations' ? 4 : 0;
-      if (d - bias < bestD) {
-        bestD = d - bias;
-        best = i;
-      }
+      if (this.sats[i].dataset === 'stations') d2 *= 0.5;
+      if (d2 >= bestD) continue;
+      cand.set(lx, ly, lz).applyMatrix4(this.globe.inertial.matrixWorld);
+      if (!this.globe.project(cand).visible) continue;
+      bestD = d2;
+      best = i;
     }
     return best;
   }
 
+  /** Hover tooltip; pointer moves are coalesced to one pick per frame. */
   hover(x: number, y: number): void {
     if (!this.visible) return;
-    const i = this.pick(x, y, 10);
-    if (i === null || i === this.selected) {
-      this.tooltip.style.display = 'none';
-      this.globe.renderer.domElement.style.cursor = '';
-      return;
-    }
-    this.tooltip.textContent = this.sats[i].name;
-    this.tooltip.style.display = 'block';
-    this.tooltip.style.transform = `translate3d(${x + 14}px, ${y - 10}px, 0)`;
-    this.globe.renderer.domElement.style.cursor = 'pointer';
+    this.hoverAt = [x, y];
+    if (this.hoverQueued) return;
+    this.hoverQueued = true;
+    requestAnimationFrame(() => {
+      this.hoverQueued = false;
+      const [hx, hy] = this.hoverAt;
+      const i = this.pick(hx, hy, 10);
+      if (i === null || i === this.selected) {
+        this.tooltip.style.display = 'none';
+        this.globe.renderer.domElement.style.cursor = '';
+        return;
+      }
+      this.tooltip.textContent = this.sats[i].name;
+      this.tooltip.style.display = 'block';
+      this.tooltip.style.transform = `translate3d(${hx + 14}px, ${hy - 10}px, 0)`;
+      this.globe.renderer.domElement.style.cursor = 'pointer';
+    });
   }
 
   /** Satellites above the horizon for an observer, from the worker. */

@@ -37,6 +37,8 @@ function boot(): void {
   const board = new BoardPanel($('#board-panel'), clock, globe, places);
   const orbits = new OrbitsPanel($('#orbits-panel'), clock, globe, sats);
   const timebar = new TimeBar($('#timebar'), clock);
+  // Debug handle for local profiling; stripped from production builds.
+  if (import.meta.env.DEV) Object.assign(window, { __tb: { globe, sats, clock } });
 
   globe.onFrame((sim) => {
     board.tick(sim);
